@@ -31,10 +31,7 @@ namespace ysp::qt::html {
 				}
 			}
 		}
-		for (auto& element : elements) {
-			TagToQWidegt(element->tag);
-		}
-		return nullptr;
+		return ElementsToQWidegt(elements);
 	}
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements) {
         std::stack<ElementData*> elementStack;
@@ -62,19 +59,104 @@ namespace ysp::qt::html {
                 if (!elementStack.empty()) {
                     elementStack.pop();
                 }
-                if (xml.name().toString() == "body" && elementStack.empty()) {
+                if (xml.name().toString().toLower() == "body" && elementStack.empty()) {
                     break;
                 }
             }
         }
 	
 	}
-	QWidget* ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements) {
+	void HtmlReader::ParseAttributes(ElementData* element, QWidget* widget) {
+		widget->setAutoFillBackground(true);
+		widget->setGeometry(0, 0, 0, 0);
+		QMap<QString, QString>& attributes = element->attributes;
+		//优先判断是否有style修饰，优先解析style中的值
+		if (ContainsKey(attributes, "style")) {
+			QMap<QString, QString> styleattributes;
+			ParseStyleString(attributes["style"], styleattributes);
+			for (const QString& key : styleattributes.keys()) {
+				ParseKey(key, widget, styleattributes);
+			}
+		}
+		//解析非style值的标签
+		for (const QString& key : attributes.keys()) {
+			ParseKey(key,widget, attributes);
+		}
+	}
+
+	/// <summary>
+	/// 解析style字符串
+	/// </summary>
+	/// <param name="style"></param>
+	/// <param name="map"></param>
+	void HtmlReader::ParseStyleString(const QString& styleValue, QMap<QString, QString>& map) {
+		if (styleValue.isEmpty()) return;
+		QString value = styleValue.trimmed();
+		QStringList pairs = value.split(';', Qt::SkipEmptyParts);
+		for (const QString& pair : pairs) {
+			const QString& trimmedPair = pair.trimmed();
+			if (trimmedPair.isEmpty()) continue;
+			qint32 colonIndex = trimmedPair.indexOf(':');
+			if (colonIndex > 0) {
+				const QString& key = trimmedPair.left(colonIndex).trimmed();
+				const QString& value = trimmedPair.mid(colonIndex + 1).trimmed();
+				if (!key.isEmpty()) {
+					map[key] = value;
+				}
+			}
+		}
+
+	}
+	void HtmlReader::ParseKey(const QString& key, QWidget* widget, QMap<QString, QString>& attributes) {
+		QWidget* parent = widget->parentWidget() ? widget->parentWidget() : nullptr;
+		const QString& lkey = key.toLower();
+		QString value = attributes[key].trimmed();
+		if (lkey == "width") {
+			widget->resize(value.toInt(), widget->height());
+		}
+		else if (lkey == "height") {
+			widget->resize(widget->width(), value.toInt());
+		}
+		else if (lkey == "top") {
+			widget->move(widget->x(), value.toInt());
+		}
+		else if (lkey == "left") {
+			widget->move(value.toInt(), widget->y());
+		}
+		else if (lkey == "bottom" && parent) {
+			if (ContainsKey(attributes, "height")) {
+				widget->resize(widget->width(), attributes["height"].toInt());
+			}
+			widget->move(widget->x(), parent->height() - value.toInt() - widget->height());
+		}
+		else if (lkey == "right" && parent) {
+			if (ContainsKey(attributes, "width")) {
+				widget->resize(attributes["width"].toInt(), widget->height());
+			}
+			widget->move(parent->width() - value.toInt() - widget->width(), widget->y());
+		}
+		else if (lkey == "background-color") {
+			QPalette palette = widget->palette();
+			palette.setColor(QPalette::Window, QColor(value));
+			widget->setPalette(palette);
+		}
+	}
+	bool HtmlReader::ContainsKey(const QMap<QString, QString>& map, const QString& key) {
+		QString lowerKey = key.toLower();
+		for (const QString& mapKey : map.keys()) {
+			if (mapKey.toLower() == lowerKey) {
+				return true;
+			}
+		}
+		return false;
+	}
+	QWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements) {
 		QMap<ElementData*, QWidget*> map;
 		QWidget* parent = new QWidget;
+		parent->resize(1600, 900);
 		for (auto& element : elements) {
 			QWidget* widget = nullptr;
-			if (element->tag == "div") {
+			if (element->tag.toLower() == "div") {
 				widget = new QWidget;
 			}
 			map[element.get()] = widget;
@@ -84,6 +166,7 @@ namespace ysp::qt::html {
 			else {
 				widget->setParent(parent);
 			}
+			ParseAttributes(element.get(), widget);
 		}
 		//没有数据
 		if (parent->children().isEmpty()) {

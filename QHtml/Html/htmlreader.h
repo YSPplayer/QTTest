@@ -25,5 +25,9 @@ namespace ysp::qt::html {
 		QList<std::shared_ptr<ElementData>> elementDatas;
 		static QWidget* ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements);
 		static QList<QString> tags;
+		static void ParseAttributes(ElementData* element,QWidget* widget);
+		static void ParseStyleString(const QString& styleValue, QMap<QString, QString>& map);
+		static void ParseKey(const QString& key,QWidget* widget, QMap<QString, QString>& attributes);
+		static bool ContainsKey(const QMap<QString, QString>& map,const QString& key);
 	};
 }

@@ -1,0 +1,6 @@
+<body>
+	<div id="dds" style="width: 500;height:600 ; background-color:#38DAD8" right ="50" bottom ="0">
+		<div width="50" height ="100" left ="50" top ="10" 
+			 background-color="#2CA83B"> </div>
+	</div>
+</body>
