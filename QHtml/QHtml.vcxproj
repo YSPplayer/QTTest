@@ -95,12 +95,16 @@
     <QtRcc Include="QHtml.qrc" />
     <QtUic Include="QHtml.ui" />
     <QtMoc Include="QHtml.h" />
+    <ClCompile Include="Html\cssparser.cpp" />
     <ClCompile Include="Html\htmlreader.cpp" />
+    <ClCompile Include="Html\stylebuilder.cpp" />
     <ClCompile Include="QHtml.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="Html\cssparser.h" />
     <ClInclude Include="Html\htmlreader.h" />
+    <ClInclude Include="Html\stylebuilder.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="QHtml\main.xml" />

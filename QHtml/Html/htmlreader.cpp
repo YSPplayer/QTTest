@@ -43,7 +43,7 @@ namespace ysp::qt::html {
                 data->tag = xml.name().toString();
                 const QXmlStreamAttributes& attributes = xml.attributes();
                 for (const QXmlStreamAttribute& attr : attributes) {
-                    data->attributes[attr.name().toString()] = attr.value().toString();
+                    data->attributes[attr.name().toString().toLower()] = attr.value().toString();
                 }
                 elements.append(data);
                 elementStack.push(data.get());
@@ -70,18 +70,26 @@ namespace ysp::qt::html {
 		widget->setAutoFillBackground(true);
 		widget->setGeometry(0, 0, 0, 0);
 		QMap<QString, QString>& attributes = element->attributes;
+		if (attributes.contains("id")) { //优先提取id
+			widget->setObjectName(attributes["id"]);
+		}
+		if (attributes.contains("class")) { //优先提取id
+			widget->setProperty("class",attributes["class"]);
+		}
+		StyleBuilder builder(widget);
 		//优先判断是否有style修饰，优先解析style中的值
-		if (ContainsKey(attributes, "style")) {
+		if (attributes.contains("style")) {
 			QMap<QString, QString> styleattributes;
 			ParseStyleString(attributes["style"], styleattributes);
 			for (const QString& key : styleattributes.keys()) {
-				ParseKey(key, widget, styleattributes);
+				ParseKey(key, widget, builder,styleattributes);
 			}
 		}
 		//解析非style值的标签
 		for (const QString& key : attributes.keys()) {
-			ParseKey(key,widget, attributes);
+			ParseKey(key,widget, builder,attributes);
 		}
+		widget->setStyleSheet(builder.ToString());
 	}
 
 	/// <summary>
@@ -98,7 +106,7 @@ namespace ysp::qt::html {
 			if (trimmedPair.isEmpty()) continue;
 			qint32 colonIndex = trimmedPair.indexOf(':');
 			if (colonIndex > 0) {
-				const QString& key = trimmedPair.left(colonIndex).trimmed();
+				const QString& key = trimmedPair.left(colonIndex).trimmed().toLower();
 				const QString& value = trimmedPair.mid(colonIndex + 1).trimmed();
 				if (!key.isEmpty()) {
 					map[key] = value;
@@ -107,10 +115,11 @@ namespace ysp::qt::html {
 		}
 
 	}
-	void HtmlReader::ParseKey(const QString& key, QWidget* widget, QMap<QString, QString>& attributes) {
+	void HtmlReader::ParseKey(const QString& key, QWidget* widget, StyleBuilder& builder, QMap<QString, QString>& attributes) {
 		QWidget* parent = widget->parentWidget() ? widget->parentWidget() : nullptr;
-		const QString& lkey = key.toLower();
+		const QString& lkey = key;
 		QString value = attributes[key].trimmed();
+		StyleBuilder style(widget);
 		if (lkey == "width") {
 			widget->resize(value.toInt(), widget->height());
 		}
@@ -136,20 +145,39 @@ namespace ysp::qt::html {
 			widget->move(parent->width() - value.toInt() - widget->width(), widget->y());
 		}
 		else if (lkey == "background-color") {
-			QPalette palette = widget->palette();
-			palette.setColor(QPalette::Window, QColor(value));
-			widget->setPalette(palette);
+			builder.SetBackgroundColor(value);
+		}
+		else if (lkey == "border-radius") {
+			const QList<QString> results = Split(value," ");
+			if (results.count() == 4) {
+				builder.SetBorderRadius(results[0].toInt(),
+					results[1].toInt(), results[2].toInt(), results[3].toInt());
+			}
+			else {
+				builder.SetBorderRadius(value.toInt());
+			}
 		}
 	}
-	bool HtmlReader::ContainsKey(const QMap<QString, QString>& map, const QString& key) {
-		QString lowerKey = key.toLower();
-		for (const QString& mapKey : map.keys()) {
-			if (mapKey.toLower() == lowerKey) {
+	bool HtmlReader::ContainsKey(QMap<QString, QString>& map,const QString& key) {
+		const QString& lowerKey = key.toLower();
+		for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+			if (it.key().compare(lowerKey, Qt::CaseInsensitive) == 0) {
+				map[lowerKey] = it.value();
 				return true;
 			}
 		}
 		return false;
 	}
+
+	QList<QString> HtmlReader::Split(const QString& key, const QString& split) {
+		QList<QString> resultList;
+		QStringList tempList = key.split(split, Qt::SkipEmptyParts);
+		for (const QString& item : tempList) {
+			resultList.append(item);
+		}
+		return resultList;
+	}
+
 	QWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements) {
 		QMap<ElementData*, QWidget*> map;
 		QWidget* parent = new QWidget;

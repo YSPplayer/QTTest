@@ -43,13 +43,27 @@
     <ClCompile Include="Html\htmlreader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Html\stylebuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Html\cssparser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Html\htmlreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Html\stylebuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="QHtml\main.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="Html\cssparser.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
 </Project>
