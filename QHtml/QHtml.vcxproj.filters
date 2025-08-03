@@ -49,12 +49,27 @@
     <ClCompile Include="Html\cssparser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Html\jsparser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Html\linkbridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Html\htmlreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Html\stylebuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\listfilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\jsparser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\linkbridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -63,6 +63,24 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\Package;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>..\Package\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>duktape.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <AdditionalDependencies>duktape.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\Package\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\Package\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -97,6 +115,8 @@
     <QtMoc Include="QHtml.h" />
     <ClCompile Include="Html\cssparser.cpp" />
     <ClCompile Include="Html\htmlreader.cpp" />
+    <ClCompile Include="Html\jsparser.cpp" />
+    <ClCompile Include="Html\linkbridge.cpp" />
     <ClCompile Include="Html\stylebuilder.cpp" />
     <ClCompile Include="QHtml.cpp" />
     <ClCompile Include="main.cpp" />
@@ -104,6 +124,9 @@
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h" />
     <ClInclude Include="Html\htmlreader.h" />
+    <ClInclude Include="Html\jsparser.h" />
+    <ClInclude Include="Html\linkbridge.h" />
+    <ClInclude Include="Html\listfilter.h" />
     <ClInclude Include="Html\stylebuilder.h" />
   </ItemGroup>
   <ItemGroup>

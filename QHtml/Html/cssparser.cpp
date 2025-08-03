@@ -4,7 +4,6 @@
 */
 #include "cssparser.h"
 namespace ysp::qt::html {
-#include "cssparser.h"
 
     CSSParser::CSSParser(QObject* parent)
         : QObject(parent)
@@ -13,6 +12,10 @@ namespace ysp::qt::html {
 
     CSSParser::~CSSParser()
     {
+        for (qint32 i = 0; i < m_rules.count(); ++i) {
+            delete m_rules[i];
+            m_rules[i] = nullptr;
+        }
     }
 
     bool CSSParser::parseCSS(const QString& cssString)
@@ -25,14 +28,14 @@ namespace ysp::qt::html {
 
             for (const QString& ruleText : rules) {
                 if (!ruleText.trimmed().isEmpty()) {
-                    CSSRule rule = parseRule(ruleText);
-                    if (!rule.selector.isEmpty()) {
+                    CSSRule* rule = parseRule(ruleText);
+                    if (!rule->selector.isEmpty()) {
                         m_rules.append(rule);
                     }
                 }
             }
 
-            return true;
+            return m_rules.count() > 0;
         }
         catch (const std::exception& e) {
             qWarning() << "CSS parsing error:" << e.what();
@@ -44,14 +47,14 @@ namespace ysp::qt::html {
     {
         QString cleaned = cssText;
 
-        // ÒÆ³ı×¢ÊÍ
+        // ç§»é™¤æ³¨é‡Š
         QRegularExpression commentRegex(R"(\/\*.*?\*\/)", QRegularExpression::DotMatchesEverythingOption);
         cleaned.remove(commentRegex);
 
-        // ÒÆ³ı¶àÓàµÄ¿Õ°××Ö·û
+        // ç§»é™¤å¤šä½™çš„ç©ºç™½å­—ç¬¦
         cleaned = cleaned.simplified();
 
-        // ±ê×¼»¯»»ĞĞ·û
+        // æ ‡å‡†åŒ–æ¢è¡Œç¬¦
         cleaned.replace(QRegularExpression(R"(\r\n|\r)"), "\n");
 
         return cleaned;
@@ -90,11 +93,11 @@ namespace ysp::qt::html {
         return rules;
     }
 
-    CSSRule CSSParser::parseRule(const QString& ruleText)
+    CSSRule* CSSParser::parseRule(const QString& ruleText)
     {
-        CSSRule rule;
+        CSSRule* rule = new CSSRule;
 
-        // ²éÕÒÑ¡ÔñÆ÷ºÍÊôĞÔ²¿·Ö
+        // æŸ¥æ‰¾é€‰æ‹©å™¨å’Œå±æ€§éƒ¨åˆ†
         int braceStart = ruleText.indexOf('{');
         int braceEnd = ruleText.lastIndexOf('}');
 
@@ -102,13 +105,13 @@ namespace ysp::qt::html {
             return rule;
         }
 
-        // ½âÎöÑ¡ÔñÆ÷
+        // è§£æé€‰æ‹©å™¨
         QString selectorText = ruleText.left(braceStart).trimmed();
-        rule.selector = parseSelector(selectorText);
+        rule->selector = parseSelector(selectorText);
 
-        // ½âÎöÊôĞÔ
+        // è§£æå±æ€§
         QString propertiesText = ruleText.mid(braceStart + 1, braceEnd - braceStart - 1);
-        rule.properties = parseProperties(propertiesText);
+        rule->properties = parseProperties(propertiesText);
 
         return rule;
     }
@@ -159,7 +162,7 @@ namespace ysp::qt::html {
             currentProperty += ch;
         }
 
-        // Ìí¼Ó×îºóÒ»¸öÊôĞÔ
+        // æ·»åŠ æœ€åä¸€ä¸ªå±æ€§
         if (!currentProperty.trimmed().isEmpty()) {
             properties.append(currentProperty.trimmed());
         }
@@ -171,19 +174,19 @@ namespace ysp::qt::html {
     {
         CSSProperty property;
 
-        // ²éÕÒÃ°ºÅ·Ö¸ô·û
+        // æŸ¥æ‰¾å†’å·åˆ†éš”ç¬¦
         int colonIndex = propertyText.indexOf(':');
         if (colonIndex == -1) {
             return property;
         }
 
-        // ½âÎöÊôĞÔÃû
+        // è§£æå±æ€§å
         property.name = propertyText.left(colonIndex).trimmed();
 
-        // ½âÎöÊôĞÔÖµ
+        // è§£æå±æ€§å€¼
         QString valueText = propertyText.mid(colonIndex + 1).trimmed();
 
-        // ¼ì²éÊÇ·ñ°üº¬ !important
+        // æ£€æŸ¥æ˜¯å¦åŒ…å« !important
         if (valueText.contains("!important", Qt::CaseInsensitive)) {
             property.important = true;
             valueText.remove(QRegularExpression(R"(\s*!important\s*$)", QRegularExpression::CaseInsensitiveOption));
@@ -194,12 +197,12 @@ namespace ysp::qt::html {
         return property;
     }
 
-    QList<CSSRule> CSSParser::findRulesBySelector(const QString& selector) const
+    QList<CSSRule*> CSSParser::findRulesBySelector(const QString& selector) const
     {
-        QList<CSSRule> foundRules;
+        QList<CSSRule*> foundRules;
 
-        for (const CSSRule& rule : m_rules) {
-            if (rule.selector.contains(selector, Qt::CaseInsensitive)) {
+        for (CSSRule* rule : m_rules) {
+            if (rule->selector.contains(selector, Qt::CaseInsensitive)) {
                 foundRules.append(rule);
             }
         }
@@ -211,9 +214,9 @@ namespace ysp::qt::html {
     {
         QMap<QString, QString> properties;
 
-        for (const CSSRule& rule : m_rules) {
-            if (rule.selector.contains(selector, Qt::CaseInsensitive)) {
-                for (auto it = rule.properties.begin(); it != rule.properties.end(); ++it) {
+        for (CSSRule* rule : m_rules) {
+            if (rule->selector.contains(selector, Qt::CaseInsensitive)) {
+                for (auto it = rule->properties.begin(); it != rule->properties.end(); ++it) {
                     properties[it.key()] = it.value().value;
                 }
             }
@@ -227,7 +230,7 @@ namespace ysp::qt::html {
         m_rules.clear();
     }
 
-    void CSSParser::addRule(const CSSRule& rule)
+    void CSSParser::addRule(CSSRule* rule)
     {
         m_rules.append(rule);
     }
@@ -238,12 +241,12 @@ namespace ysp::qt::html {
         qDebug() << "Total rules:" << m_rules.size();
 
         for (int i = 0; i < m_rules.size(); ++i) {
-            const CSSRule& rule = m_rules[i];
+            CSSRule* rule = m_rules[i];
             qDebug() << "\nRule" << (i + 1) << ":";
-            qDebug() << "  Selector:" << rule.selector;
+            qDebug() << "  Selector:" << rule->selector;
             qDebug() << "  Properties:";
 
-            for (auto it = rule.properties.begin(); it != rule.properties.end(); ++it) {
+            for (auto it = rule->properties.begin(); it != rule->properties.end(); ++it) {
                 QString important = it.value().important ? " !important" : "";
                 qDebug() << "    " << it.key() << ":" << it.value().value << important;
             }

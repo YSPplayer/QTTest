@@ -10,27 +10,26 @@
 #include <QRegularExpression>
 #include <QDebug>
 namespace ysp::qt::html {
-    // CSSÊôĞÔ½á¹¹
+    // CSSå±æ€§ç»“æ„
     struct CSSProperty {
-        QString name;       // ÊôĞÔÃû
-        QString value;      // ÊôĞÔÖµ
-        bool important;     // ÊÇ·ñÖØÒª
+        QString name;       // å±æ€§å
+        QString value;      // å±æ€§å€¼
+        bool important;     // æ˜¯å¦é‡è¦
 
         CSSProperty() : important(false) {}
         CSSProperty(const QString& n, const QString& v, bool imp = false)
             : name(n), value(v), important(imp) {}
     };
 
-    // CSS¹æÔò½á¹¹
+    // CSSè§„åˆ™ç»“æ„
     struct CSSRule {
-        QString selector;                           // Ñ¡ÔñÆ÷
-        QMap<QString, CSSProperty> properties;     // ÊôĞÔÓ³Éä
-
+        QString selector;                           // é€‰æ‹©å™¨
+        QMap<QString, CSSProperty> properties;     // å±æ€§æ˜ å°„
         CSSRule() {}
         CSSRule(const QString& sel) : selector(sel) {}
     };
 
-    // CSS½âÎöÆ÷Àà
+    // CSSè§£æå™¨ç±»
     class CSSParser : public QObject
     {
         Q_OBJECT
@@ -39,49 +38,48 @@ namespace ysp::qt::html {
         explicit CSSParser(QObject* parent = nullptr);
         ~CSSParser();
 
-        // ½âÎöCSS×Ö·û´®
+        // è§£æCSSå­—ç¬¦ä¸²
         bool parseCSS(const QString& cssString);
 
-        // »ñÈ¡½âÎö½á¹û
-        QList<CSSRule> getRules() const { return m_rules; }
+        // è·å–è§£æç»“æœ
+        QList<CSSRule*> getRules() const { return m_rules; }
+        // æ ¹æ®é€‰æ‹©å™¨æŸ¥æ‰¾è§„åˆ™
+        QList<CSSRule*> findRulesBySelector(const QString& selector) const;
 
-        // ¸ù¾İÑ¡ÔñÆ÷²éÕÒ¹æÔò
-        QList<CSSRule> findRulesBySelector(const QString& selector) const;
-
-        // »ñÈ¡ÌØ¶¨Ñ¡ÔñÆ÷µÄÊôĞÔ
+        // è·å–ç‰¹å®šé€‰æ‹©å™¨çš„å±æ€§
         QMap<QString, QString> getProperties(const QString& selector) const;
 
-        // Çå³ıËùÓĞ¹æÔò
+        // æ¸…é™¤æ‰€æœ‰è§„åˆ™
         void clear();
 
-        // Ìí¼Ó¹æÔò
-        void addRule(const CSSRule& rule);
+        // æ·»åŠ è§„åˆ™
+        void addRule(CSSRule* rule);
 
-        // µ÷ÊÔÊä³ö
+        // è°ƒè¯•è¾“å‡º
         void debugPrint() const;
 
     private:
-        QList<CSSRule> m_rules;
+        QList<CSSRule*> m_rules;
 
-        // ½âÎöµ¥¸öCSS¹æÔò
-        CSSRule parseRule(const QString& ruleText);
+        // è§£æå•ä¸ªCSSè§„åˆ™
+        CSSRule* parseRule(const QString& ruleText);
 
-        // ½âÎöÑ¡ÔñÆ÷
+        // è§£æé€‰æ‹©å™¨
         QString parseSelector(const QString& selectorText);
 
-        // ½âÎöÊôĞÔÉùÃ÷
+        // è§£æå±æ€§å£°æ˜
         QMap<QString, CSSProperty> parseProperties(const QString& propertiesText);
 
-        // ½âÎöµ¥¸öÊôĞÔ
+        // è§£æå•ä¸ªå±æ€§
         CSSProperty parseProperty(const QString& propertyText);
 
-        // ÇåÀíºÍ±ê×¼»¯CSSÎÄ±¾
+        // æ¸…ç†å’Œæ ‡å‡†åŒ–CSSæ–‡æœ¬
         QString cleanCSS(const QString& cssText);
 
-        // ·Ö¸îCSS¹æÔò
+        // åˆ†å‰²CSSè§„åˆ™
         QStringList splitRules(const QString& cssText);
 
-        // ·Ö¸îÊôĞÔÉùÃ÷
+        // åˆ†å‰²å±æ€§å£°æ˜
         QStringList splitProperties(const QString& propertiesText);
     };
 

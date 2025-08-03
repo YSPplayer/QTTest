@@ -5,7 +5,6 @@
 #include "stylebuilder.h"
 namespace ysp::qt::html {
 	StyleBuilder::StyleBuilder(QWidget* widget) {
-		format = QString("%1#%2");
 		const QString& id = widget->objectName();
 		const QString& classValue = widget->property("class").isValid() ?
 			widget->property("class").toString() : "";
