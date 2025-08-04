@@ -14,7 +14,14 @@
 			 background-color="#2CA83B"> </div>
 	</div>
 	<script>
-			
+		const main = function() {
+		console.log('ho to bug 你好 世界!');
+		const div = document.getElementById('interactive-div');
+		div.width = 100;
+		};
+		window.addEventListener('load', function() {
+		main();
+		});
 	</script>
 </body>
 </html>

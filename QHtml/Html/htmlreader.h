@@ -10,6 +10,7 @@
 #include <QList>
 #include "stylebuilder.h"
 #include "cssparser.h"
+#include "jsparser.h"
 namespace ysp::qt::html {
 	struct ElementData {
 		ElementData* parent{ nullptr };
@@ -22,7 +23,7 @@ namespace ysp::qt::html {
 		HtmlReader(const QString& filePath);
 		QWidget* Parse();
 	private:
-		static void ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements);
+		static void ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser);
 		static void ParseStyleElement(QXmlStreamReader& xml,CSSParser& parser, QList<CSSRule*>& rules);
 		QString html;
 		QList<std::shared_ptr<ElementData>> elementDatas;

@@ -40,9 +40,7 @@ namespace ysp::qt::html {
 		bool success = false;
 		duk_idx_t top = duk_get_top(ctx);
 		try {
-			// 先编译检查语法
-			duk_compile_string(ctx, 0, script);
-			if (duk_pcall(ctx, 0) != 0) {
+			if (duk_peval_string(ctx, script) != 0) {
 				// 运行时错误
 				const char* error = duk_safe_to_string(ctx, -1);
 				LinkBridge::Print(error);
@@ -62,6 +60,84 @@ namespace ysp::qt::html {
 		binder->beginObject();
 		binder->bindMethod("log", ConsoleLog, DUK_VARARGS);
 		binder->setGlobal("console");
+
+		binder->beginObject();
+		binder->bindMethod("addEventListener", WindowAddEventListener, 2);
+		binder->setGlobal("window");
+	}
+	void JsParser::PushJsValue(const JsValue& value) {
+		void* v = value.value;
+		switch (value.type) {
+		case JS_TYPE_STRING: { // std::string
+			const std::string& str = *(std::string*)v;
+			duk_push_string(ctx, str.c_str());
+			break;
+		}
+		case JS_TYPE_INT: { // int
+			duk_push_int(ctx, *(int*)v);
+			break;
+		}
+		case JS_TYPE_DOUBLE: { // double
+			duk_push_number(ctx, *(double*)v);
+			break;
+		}
+		case JS_TYPE_BOOL: { // bool
+			duk_push_boolean(ctx, *(bool*)v);
+			break;
+		}
+		case JS_TYPE_CLASS: { // std::map<std::string, std::shared_ptr<JsValue>>
+			PushJsObject(*(JsClass*)v);
+			break;
+		}
+		case JS_TYPE_ARRAY: { // std::vector<std::shared_ptr<JsValue>>
+			PushJsArray(*(JsArray*)v);
+			break;
+		}
+		default:
+			duk_push_undefined(ctx);
+			break;
+		}
+	}
+	void JsParser::PushJsObject(const JsClass& obj) {
+		duk_push_object(ctx);
+		for (const auto& [key, value] : obj) {
+			PushJsValue(*value.get());
+			duk_put_prop_string(ctx, -2, key.c_str());
+		}
+	}
+	void JsParser::PushJsArray(const JsArray& arr) {
+		duk_push_array(ctx);
+		for (size_t i = 0; i < arr.size(); ++i) {
+			PushJsValue(*arr[i].get());
+			duk_put_prop_index(ctx, -2, i);
+		}
+	}
+	void JsParser::Trigger(const std::string& callbackType, const std::vector<JsValue>& params) {
+		if (!ctx) {
+			return;
+		}
+		duk_get_global_string(ctx, callbackType.c_str());
+		if (duk_is_function(ctx, -1)) {
+			// 将所有参数推入栈
+			for (const auto& param : params) {
+				PushJsValue(param);
+			}
+			// 调用回调函数
+			if (duk_pcall(ctx, params.size()) != 0) {
+				LinkBridge::Print(duk_safe_to_string(ctx, -1));
+			}
+			duk_pop(ctx);
+		}
+		else {
+			//不存在数据，不用管
+			duk_pop(ctx);
+		}
+	}
+	void JsParser::Trigger(const std::string& callbackType, const JsValue& param) {
+		Trigger(callbackType, { param });
+	}
+	void JsParser::Trigger(const std::string& callbackType) {
+		Trigger(callbackType, {});
 	}
 	JS_API duk_ret_t JsParser::ConsoleLog(duk_context* ctx) {
 		duk_push_string(ctx, " ");//往栈顶压入分隔符
@@ -70,12 +146,25 @@ namespace ysp::qt::html {
 		LinkBridge::Print(duk_safe_to_string(ctx, -1));//转为字符串
 		return 0;
 	}
+	JS_API duk_ret_t JsParser::WindowAddEventListener(duk_context* ctx) {
+		if(duk_get_top(ctx) < 2) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		const char* callbackType = duk_require_string(ctx, 0);
+		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
+		duk_put_global_string(ctx, callbackType);
+		return 0;
+	}
+	JS_API duk_ret_t JsParser::DocumentGetElementById(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+
+	}
 	void JSBinder::beginObject() {
 		duk_push_object(ctx);
 	}
 
-	void JSBinder::bindMethod(const char* name, duk_c_function func, int nargs) {
-		duk_push_c_function(ctx, func, nargs);
+	void JSBinder::bindMethod(const char* name, duk_c_function func, int args) {
+		duk_push_c_function(ctx, func, args);
 		duk_put_prop_string(ctx, -2, name);
 	}
 
@@ -91,6 +180,24 @@ namespace ysp::qt::html {
 
 	void JSBinder::setGlobal(const char* name) {
 		duk_put_global_string(ctx, name);
+	}
+
+	JsValue::JsValue(void* value, int type) {
+		this->value = value;
+		this->type = type;
+	}
+
+	JsValue::~JsValue() {
+		switch (type) {
+		case JS_TYPE_CLASS: delete static_cast<JsClass*>(value); break;
+		case JS_TYPE_ARRAY: delete static_cast<JsArray*>(value); break;
+		case JS_TYPE_STRING: delete static_cast<std::string*>(value); break;
+		case JS_TYPE_INT: delete static_cast<int*>(value); break;
+		case JS_TYPE_DOUBLE: delete static_cast<double*>(value); break;
+		case JS_TYPE_BOOL: delete static_cast<bool*>(value); break;
+		default: break;
+		}
+		value = nullptr;
 	}
 
 }

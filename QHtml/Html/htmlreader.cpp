@@ -6,7 +6,6 @@
 #include <QFile>
 #include "htmlreader.h"
 #include "listfilter.h"
-#include "jsparser.h"
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
 		QFile file(filePath);
@@ -26,55 +25,74 @@ namespace ysp::qt::html {
 		QList<CSSRule*> cssrules;
 		CSSParser cssParser;
 		JsParser jsParser;
-		if (jsParser.Init()) {
-			jsParser.RunJs("console.log(1,2,gotobug)");
-		}
+		jsParser.Init();
 		while (!xml.atEnd() && !xml.hasError()) {
 			const QXmlStreamReader::TokenType& token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "body") { //第一个节点必须是以body开头
-					ParseChildElements(xml, elements);
+					ParseChildElements(xml, elements, jsParser);
 				}
 				else if (elementName == "style") {
 					ParseStyleElement(xml, cssParser, cssrules);
 				}
-				else if (elementName == "script") {
-					
-				}
 			}
 		}
-		return ElementsToQWidegt(elements,cssrules);
+		QWidget* widget = ElementsToQWidegt(elements,cssrules);
+		//UI加载完毕之后触发
+		jsParser.Trigger("load");
+		return widget;
 	}
-	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements) {
+	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser) {
         std::stack<ElementData*> elementStack;
+		bool hasjs = false;
+		QString jsscript = "";
         while (!xml.atEnd() && !xml.hasError()) {
             QXmlStreamReader::TokenType token = xml.readNext();
             if (token == QXmlStreamReader::StartElement) {
-                auto data = std::make_shared<ElementData>();
-                data->parent = elementStack.empty() ? nullptr : elementStack.top();
-                data->tag = xml.name().toString();
-                const QXmlStreamAttributes& attributes = xml.attributes();
-                for (const QXmlStreamAttribute& attr : attributes) {
-                    data->attributes[attr.name().toString().toLower()] = attr.value().toString();
-                }
-                elements.append(data);
-                elementStack.push(data.get());
+				const QString& elementName = xml.name().toString().toLower();
+				if (elementName == "script") {
+					hasjs = true;
+				}
+				else {
+					auto data = std::make_shared<ElementData>();
+					data->parent = elementStack.empty() ? nullptr : elementStack.top();
+					data->tag = xml.name().toString();
+					const QXmlStreamAttributes& attributes = xml.attributes();
+					for (const QXmlStreamAttribute& attr : attributes) {
+						data->attributes[attr.name().toString().toLower()] = attr.value().toString();
+					}
+					elements.append(data);
+					elementStack.push(data.get());
+				}
             }
             else if (token == QXmlStreamReader::Characters) {
-                const QString& text = xml.text().toString().trimmed();
-                if (!text.isEmpty() && !elementStack.empty())
-                {
-                    elementStack.top()->text = text;
-                }
+				if (hasjs) {
+					jsscript += xml.text().toString();
+				}
+				else {
+					const QString& text = xml.text().toString().trimmed();
+					if (!text.isEmpty() && !elementStack.empty())
+					{
+						elementStack.top()->text = text;
+					}
+				}
             }
             else if (token == QXmlStreamReader::EndElement) {
-                if (!elementStack.empty()) {
-                    elementStack.pop();
-                }
-                if (xml.name().toString().toLower() == "body" && elementStack.empty()) {
-                    break;
-                }
+				const QString& elementName = xml.name().toString().toLower();
+				if (elementName == "script") {
+					hasjs = false;
+					jsparser.RunJs(jsscript.toUtf8().constData());//执行脚本
+					jsscript = "";
+				}
+				else {
+					if (!elementStack.empty()) {
+						elementStack.pop();
+					}
+					if (elementName == "body" && elementStack.empty()) {
+						break;
+					}
+				}
             }
         }
 	
@@ -257,13 +275,6 @@ namespace ysp::qt::html {
 			}
 			ParseAttributes(element.get(), rules,widget);
 		}
-		//没有数据
-		if (parent->children().isEmpty()) {
-			parent->deleteLater();
-			return nullptr;
-		}
-		else {
-			return parent;
-		}
+		return parent;
 	}
 }
