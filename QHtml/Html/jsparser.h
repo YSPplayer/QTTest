@@ -3,6 +3,9 @@
 	2025.8.3
 */
 #pragma once
+#include <QString>
+#include <QWidget>
+#include <QList>
 #include <string>
 #include <variant>
 #include <vector>
@@ -11,14 +14,6 @@
 #include <duktape.h>
 namespace ysp::qt::html {
 #define JS_API
-	//using JsValue = std::variant<
-	//	std::string,           // 字符串
-	//	int,                   // 整数
-	//	double,                // 浮点数
-	//	bool,                  // 布尔值
-	//	std::map<std::string, std::shared_ptr<JsValue>>,  // 对象
-	//	std::vector<std::shared_ptr<JsValue>>             // 数组
-	//>;
 #define JS_TYPE_STRING 0
 #define JS_TYPE_INT 1
 #define JS_TYPE_DOUBLE 2
@@ -27,7 +22,7 @@ namespace ysp::qt::html {
 #define JS_TYPE_ARRAY 5
 #define JS_TYPE_UNDEFINED 6
 	class JsValue;
-	using JsClass = std::map<std::string, std::shared_ptr<JsValue>>;
+	using JsClass = std::map<QString, std::shared_ptr<JsValue>>;
 	using JsArray = std::vector<std::shared_ptr<JsValue>>;
 	class JsValue {
 	public:
@@ -35,12 +30,16 @@ namespace ysp::qt::html {
 		int type;
 		JsValue(void* value, int type);
 		~JsValue();
+		static std::shared_ptr<JsValue> CreateValue(qint32 value);
+		static std::shared_ptr<JsValue> CreateValue(double value);
+		static std::shared_ptr<JsValue> CreateValue(bool value);
+		static std::shared_ptr<JsValue> CreateValue(JsClass* value);
+		static std::shared_ptr<JsValue> CreateValue(JsArray* value);
 	};
 
 	class JSBinder {
 	private:
 		duk_context* ctx;
-
 	public:
 		JSBinder(duk_context* context) : ctx(context) {}
 		~JSBinder() = default;
@@ -56,19 +55,23 @@ namespace ysp::qt::html {
 		bool Init();
 		~JsParser();
 		bool RunJs(const char* script);
-		void Trigger(const std::string& callbackType, const std::vector<JsValue>& params);
-		void Trigger(const std::string& callbackType, const JsValue& param);
-		void Trigger(const std::string& callbackType);
+		void Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params);
+		void Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param);
+		void Trigger(const QString& callbackType);
+		void CreateDocument(QWidget* widget);
 	private:
+		static QList<QWidget*> objects;
 		duk_context* ctx;
 		JSBinder* binder;
 		void BindJsFunc();
-		void PushJsValue(const JsValue& value);
-		void PushJsObject(const JsClass& obj);
-		void PushJsArray(const JsArray& arr);
+		void PushJsValue(const std::shared_ptr<JsValue>& value);
+		void PushJsObject(const JsClass* obj);
+		void PushJsArray(const JsArray* arr); 
 		//func//
 		JS_API static duk_ret_t ConsoleLog(duk_context* ctx);
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
+		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementById(duk_context* ctx);
+		//func//
 	};
 }

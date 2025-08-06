@@ -1,0 +1,41 @@
+<html>
+<head>
+	<style>
+		#dds {
+		width: 500;
+		background-color:#38DAD8
+		}
+
+	</style>
+</head>
+<body>
+	<div id="dds" style="width: 500;height:600 ;border-radius:5 50 5 20" right ="50" bottom ="0">
+		<div width="50" height ="100" left ="50" top ="10" 
+			 background-color="#2CA83B"> </div>
+	</div>
+	<script>
+		const main = function() {
+		console.log('ho to bug 你好 世界!');
+		const div = document.getElementById('dds');
+		div._elementId = 10;
+		console.log('div width:' + div._elementId);
+		console.log('div width:' + div.width);
+		console.log('div height:' + div.height);
+		console.log('div height:' + typeof(div.height));
+		div.addEventListener('click',function() {
+		var s = 10;
+		console.log('click 呀 好家伙');
+		})
+		div.addEventListener('mouseup',function(e) {
+		console.log(e.button);
+		})
+		div.addEventListener('mousedown',function(e) {
+			console.log(e.button);
+		})
+		};
+		window.addEventListener('load', function() {
+		main();
+		});
+	</script>
+</body>
+</html>

@@ -10,7 +10,7 @@
 #include <QList>
 #include "stylebuilder.h"
 #include "cssparser.h"
-#include "jsparser.h"
+#include "cwidget.h"
 namespace ysp::qt::html {
 	struct ElementData {
 		ElementData* parent{ nullptr };
@@ -21,13 +21,13 @@ namespace ysp::qt::html {
 	class HtmlReader {
 	public:
 		HtmlReader(const QString& filePath);
-		QWidget* Parse();
+		CWidget* Parse();
 	private:
 		static void ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser);
 		static void ParseStyleElement(QXmlStreamReader& xml,CSSParser& parser, QList<CSSRule*>& rules);
 		QString html;
 		QList<std::shared_ptr<ElementData>> elementDatas;
-		static QWidget* ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules);
+		static CWidget* ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules, JsParser& jsparser);
 		static void ParseAttributes(ElementData* element, const QList<CSSRule*>& rules,QWidget* widget);
 		static void ParseStyleString(const QString& styleValue, QMap<QString, QString>& map);
 		static void ParseKey(const QString& key,QWidget* widget, StyleBuilder&builder,QMap<QString, QString>& attributes);

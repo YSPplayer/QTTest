@@ -113,7 +113,9 @@
     <QtRcc Include="QHtml.qrc" />
     <QtUic Include="QHtml.ui" />
     <QtMoc Include="QHtml.h" />
+    <ClCompile Include="Html\consolewindow.cpp" />
     <ClCompile Include="Html\cssparser.cpp" />
+    <ClCompile Include="Html\cwidget.cpp" />
     <ClCompile Include="Html\htmlreader.cpp" />
     <ClCompile Include="Html\jsparser.cpp" />
     <ClCompile Include="Html\linkbridge.cpp" />
@@ -123,6 +125,8 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h" />
+    <QtMoc Include="Html\consolewindow.h" />
+    <ClInclude Include="Html\cwidget.h" />
     <ClInclude Include="Html\htmlreader.h" />
     <ClInclude Include="Html\jsparser.h" />
     <ClInclude Include="Html\linkbridge.h" />
@@ -130,7 +134,7 @@
     <ClInclude Include="Html\stylebuilder.h" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="QHtml\main.xml" />
+    <None Include="QHtml\main.html" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

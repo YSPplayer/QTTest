@@ -4,11 +4,13 @@
 */
 #include "jsparser.h"
 #include "linkbridge.h"
+#include "listfilter.h"
 namespace ysp::qt::html {
 	/*
 	栈顶索引 -1 栈底索引0
 	入栈是往栈顶添加
 	*/
+	QList<QWidget*> JsParser::objects;
 	JsParser::JsParser() {
 		ctx = nullptr;
 		binder = nullptr;
@@ -64,10 +66,14 @@ namespace ysp::qt::html {
 		binder->beginObject();
 		binder->bindMethod("addEventListener", WindowAddEventListener, 2);
 		binder->setGlobal("window");
+
+		binder->beginObject();
+		binder->bindMethod("getElementById", DocumentGetElementById, 1);
+		binder->setGlobal("document");
 	}
-	void JsParser::PushJsValue(const JsValue& value) {
-		void* v = value.value;
-		switch (value.type) {
+	void JsParser::PushJsValue(const std::shared_ptr<JsValue>& value) {
+		void* v = value->value;
+		switch (value->type) {
 		case JS_TYPE_STRING: { // std::string
 			const std::string& str = *(std::string*)v;
 			duk_push_string(ctx, str.c_str());
@@ -86,11 +92,11 @@ namespace ysp::qt::html {
 			break;
 		}
 		case JS_TYPE_CLASS: { // std::map<std::string, std::shared_ptr<JsValue>>
-			PushJsObject(*(JsClass*)v);
+			PushJsObject((JsClass*)v);
 			break;
 		}
 		case JS_TYPE_ARRAY: { // std::vector<std::shared_ptr<JsValue>>
-			PushJsArray(*(JsArray*)v);
+			PushJsArray((JsArray*)v);
 			break;
 		}
 		default:
@@ -98,25 +104,28 @@ namespace ysp::qt::html {
 			break;
 		}
 	}
-	void JsParser::PushJsObject(const JsClass& obj) {
+	void JsParser::PushJsObject(const JsClass* obj) {
 		duk_push_object(ctx);
-		for (const auto& [key, value] : obj) {
-			PushJsValue(*value.get());
-			duk_put_prop_string(ctx, -2, key.c_str());
+		for (auto it = obj->begin(); it != obj->end(); ++it) {
+			const QString& key = it->first;
+			const std::shared_ptr<JsValue>& value = it->second;
+			PushJsValue(value);
+			duk_put_prop_string(ctx, -2, key.toUtf8().constData());
 		}
 	}
-	void JsParser::PushJsArray(const JsArray& arr) {
+	void JsParser::PushJsArray(const JsArray* arr) {
 		duk_push_array(ctx);
-		for (size_t i = 0; i < arr.size(); ++i) {
-			PushJsValue(*arr[i].get());
+		for (size_t i = 0; i < arr->size(); ++i) {
+			PushJsValue(arr->at(i));
 			duk_put_prop_index(ctx, -2, i);
 		}
 	}
-	void JsParser::Trigger(const std::string& callbackType, const std::vector<JsValue>& params) {
+
+	void JsParser::Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params) {
 		if (!ctx) {
 			return;
 		}
-		duk_get_global_string(ctx, callbackType.c_str());
+		duk_get_global_string(ctx, callbackType.toUtf8().constData());
 		if (duk_is_function(ctx, -1)) {
 			// 将所有参数推入栈
 			for (const auto& param : params) {
@@ -133,11 +142,32 @@ namespace ysp::qt::html {
 			duk_pop(ctx);
 		}
 	}
-	void JsParser::Trigger(const std::string& callbackType, const JsValue& param) {
-		Trigger(callbackType, { param });
+	void JsParser::Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param) {
+		const std::vector<std::shared_ptr<JsValue>>& params = { param };
+		Trigger(callbackType, params);
 	}
-	void JsParser::Trigger(const std::string& callbackType) {
-		Trigger(callbackType, {});
+	void JsParser::Trigger(const QString& callbackType) {
+		const std::vector<std::shared_ptr<JsValue>> params;
+		Trigger(callbackType, params);
+	}
+
+	/// <summary>
+	/// 创建对象
+	/// </summary>
+	void JsParser::CreateDocument(QWidget* widget) {
+		if (!widget || widget->objectName() == "" || objects.contains(widget)) return;
+		objects.append(widget);
+		duk_push_object(ctx);
+		const QString& id = widget->objectName();
+		duk_push_string(ctx, id.toUtf8().constData());
+		duk_put_prop_string(ctx, -2, "id"); 
+		duk_push_int(ctx, widget->width());
+		duk_put_prop_string(ctx, -2, "width");
+		duk_push_int(ctx, widget->height());
+		duk_put_prop_string(ctx, -2, "height");
+		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
+		QString globalKey = QString("element_%1").arg(id.toUtf8().constData());
+		duk_put_global_string(ctx, globalKey.toUtf8().constData()); 
 	}
 	JS_API duk_ret_t JsParser::ConsoleLog(duk_context* ctx) {
 		duk_push_string(ctx, " ");//往栈顶压入分隔符
@@ -154,10 +184,35 @@ namespace ysp::qt::html {
 		duk_put_global_string(ctx, callbackType);
 		return 0;
 	}
+	JS_API duk_ret_t JsParser::ObjectAddEventListener(duk_context* ctx) {
+		if (duk_get_top(ctx) < 2) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		const char* callbackType = duk_require_string(ctx, 0);
+		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
+		duk_push_this(ctx);
+		duk_get_prop_string(ctx, -1, "id");
+		const char* id = duk_require_string(ctx, -1);
+		const QString& key = QString::fromUtf8(id) + QString::fromUtf8(callbackType);
+		duk_dup(ctx, 1);
+		duk_put_global_string(ctx, key.toUtf8().constData());
+		duk_pop(ctx);
+		return 0;
+	}
 	JS_API duk_ret_t JsParser::DocumentGetElementById(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
 		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
-
+		const char* elementId = duk_require_string(ctx, 0);
+		const QString& id = QString::fromUtf8(elementId);
+		const QString& globalKey = QString("element_%1").arg(id);
+		duk_get_global_string(ctx, globalKey.toUtf8().constData());
+		if (!duk_is_undefined(ctx, -1)) {
+			return 1;
+		}
+		else {
+			duk_pop(ctx);
+			duk_push_null(ctx);
+			return 1;  
+		}
 	}
 	void JSBinder::beginObject() {
 		duk_push_object(ctx);
@@ -198,6 +253,26 @@ namespace ysp::qt::html {
 		default: break;
 		}
 		value = nullptr;
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(qint32 value) {
+		return std::make_shared<JsValue>(new qint32(value), JS_TYPE_INT);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(double value) {
+		return std::make_shared<JsValue>(new double(value), JS_TYPE_DOUBLE);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(bool value) {
+		return std::make_shared<JsValue>(new bool(value), JS_TYPE_BOOL);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(JsClass* value) {
+		return std::make_shared<JsValue>(value, JS_TYPE_CLASS);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(JsArray* value) {
+		return std::make_shared<JsValue>(value, JS_TYPE_ARRAY);
 	}
 
 }

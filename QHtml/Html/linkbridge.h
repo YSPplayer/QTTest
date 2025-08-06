@@ -7,6 +7,5 @@ namespace ysp::qt::html {
 	class LinkBridge {
 	public:
 		static void Print(const char* str);
-
 	};
 }

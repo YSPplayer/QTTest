@@ -19,28 +19,27 @@ namespace ysp::qt::html {
 		file.close();
 		html = QString::fromUtf8(data);
 	}
-	QWidget* HtmlReader::Parse() {
+	CWidget* HtmlReader::Parse() {
 		QXmlStreamReader xml(html);
 		QList<std::shared_ptr<ElementData>> elements;
 		QList<CSSRule*> cssrules;
 		CSSParser cssParser;
-		JsParser jsParser;
-		jsParser.Init();
+		JsParser* jsParser = &CWidget::jsParser;
+		jsParser->Init();
 		while (!xml.atEnd() && !xml.hasError()) {
 			const QXmlStreamReader::TokenType& token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "body") { //第一个节点必须是以body开头
-					ParseChildElements(xml, elements, jsParser);
+					ParseChildElements(xml, elements, *jsParser);
 				}
 				else if (elementName == "style") {
 					ParseStyleElement(xml, cssParser, cssrules);
 				}
 			}
 		}
-		QWidget* widget = ElementsToQWidegt(elements,cssrules);
-		//UI加载完毕之后触发
-		jsParser.Trigger("load");
+		CWidget* widget = ElementsToQWidegt(elements,cssrules,*jsParser);
+		widget->TriggerEvent("load");
 		return widget;
 	}
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser) {
@@ -256,14 +255,14 @@ namespace ysp::qt::html {
 		return "";
 	}
 
-	QWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules) {
+	CWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules, JsParser& jsparser) {
 		QMap<ElementData*, QWidget*> map;
-		QWidget* parent = new QWidget;
+		CWidget* parent = new CWidget;
 		parent->resize(1600, 900);
 		for (auto& element : elements) {
-			QWidget* widget = nullptr;
+			CWidget* widget = nullptr;
 			if (element->tag == "div") {
-				widget = new QWidget;
+				widget = new CWidget;
 			}
 			if (!widget) continue;
 			map[element.get()] = widget;
@@ -274,6 +273,7 @@ namespace ysp::qt::html {
 				widget->setParent(parent);
 			}
 			ParseAttributes(element.get(), rules,widget);
+			jsparser.CreateDocument(widget);
 		}
 		return parent;
 	}
