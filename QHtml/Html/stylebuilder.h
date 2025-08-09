@@ -10,10 +10,14 @@ namespace ysp::qt::html {
 	class StyleBuilder {
 	public:
 		StyleBuilder(QWidget* widget);
+		StyleBuilder();
 		StyleBuilder& SetBorderRadius(qint32 radius);
 		StyleBuilder& SetBorderRadius(qint32 r1, qint32 r2, qint32 r3, qint32 r4);
 		StyleBuilder& SetBackgroundColor(const QColor& color);
 		StyleBuilder& SetBackgroundColor(const QString& name);
+		StyleBuilder& SetStyle(const QString& prop, const QString& value);
+		StyleBuilder& SetStyles(const QString& cssInline);
+		QString GetStyles();
 		QString ToString();
 	private:
 		QString Build();

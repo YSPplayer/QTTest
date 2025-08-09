@@ -5,6 +5,7 @@
 #include "jsparser.h"
 #include "linkbridge.h"
 #include "listfilter.h"
+#include "cwidget.h"
 namespace ysp::qt::html {
 	/*
 	栈顶索引 -1 栈底索引0
@@ -158,16 +159,95 @@ namespace ysp::qt::html {
 		if (!widget || widget->objectName() == "" || objects.contains(widget)) return;
 		objects.append(widget);
 		duk_push_object(ctx);
-		const QString& id = widget->objectName();
-		duk_push_string(ctx, id.toUtf8().constData());
-		duk_put_prop_string(ctx, -2, "id"); 
-		duk_push_int(ctx, widget->width());
-		duk_put_prop_string(ctx, -2, "width");
-		duk_push_int(ctx, widget->height());
-		duk_put_prop_string(ctx, -2, "height");
+		//压入指针
+		duk_push_pointer(ctx, widget);
+		duk_put_prop_string(ctx, -2, K_PTRKEY);//参数二是绑定的对象，会弹出(消耗)栈顶的值
+		binder->bindAttributeMethod("id", DUK_GETTER("id"), nullptr);
+		binder->bindAttributeMethod("width", DUK_GETTER("width"), DUK_SETTER("width"));
+		binder->bindAttributeMethod("height", DUK_GETTER("height"), DUK_SETTER("height"));
+		binder->bindAttributeMethod("top", DUK_GETTER("top"), DUK_SETTER("top"));
+		binder->bindAttributeMethod("bottom", DUK_GETTER("bottom"), DUK_SETTER("bottom"));
+		binder->bindAttributeMethod("left", DUK_GETTER("left"), DUK_SETTER("left"));
+		binder->bindAttributeMethod("right", DUK_GETTER("right"), DUK_SETTER("right"));
+		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
+		const QString& id = widget->objectName();
 		QString globalKey = QString("element_%1").arg(id.toUtf8().constData());
 		duk_put_global_string(ctx, globalKey.toUtf8().constData()); 
+	}
+	QWidget* JsParser::ThisWidget(duk_context* ctx) {
+		duk_push_this(ctx);
+		if (!duk_get_prop_string(ctx, -1, K_PTRKEY)) { //不存在这个键 返回
+			duk_pop_2(ctx);
+			return nullptr;
+		}
+		QWidget* w = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+		duk_pop_2(ctx);
+		return w;
+	}
+	JS_API duk_ret_t JsParser::GetValue(duk_context* ctx, const char* name) {
+		if (auto* w = ThisWidget(ctx)) {
+			QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
+			QString key(name);
+			if (key == "id") duk_push_string(ctx, w->objectName().toUtf8().constData());
+			else if (key == "width") duk_push_int(ctx, w->width());
+			else if (key == "height") duk_push_int(ctx, w->height());
+			else if (key == "top") duk_push_int(ctx, w->y());
+			else if (key == "bottom") {
+				parent ? duk_push_int(ctx, parent->height() - w->y() - w->height()) : duk_push_int(ctx, -1);
+			}
+			else if (key == "left") duk_push_int(ctx, w->x());
+			else if (key == "right") {
+				parent ? duk_push_int(ctx, parent->width() - w->x() - w->width()) : duk_push_int(ctx, -1);
+			}
+			else if (key == "style") {
+				duk_push_string(ctx, CWidget::styleBuilder.contains(w) ?
+					CWidget::styleBuilder[w].GetStyles().toUtf8().constData() : "");
+			}
+			return 1;//返回值表示弹出
+		}
+		duk_push_undefined(ctx); 
+		return 1;
+	}
+	duk_ret_t JsParser::SetValue(duk_context* ctx, const char* name) {
+		QWidget* w = ThisWidget(ctx);
+		if (!w) return 0;
+
+		QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
+		const QString key(name);
+
+		if (key == "width") {
+			const qint32 v = duk_require_int(ctx, 0);
+			w->resize(v, w->height());
+		}
+		else if (key == "height") {
+			const qint32 v = duk_require_int(ctx, 0);
+			w->resize(w->width(), v);
+		}
+		else if (key == "left") {
+			const qint32 v = duk_require_int(ctx, 0);
+			w->move(v, w->y());
+		}
+		else if (key == "top") {
+			const qint32 v = duk_require_int(ctx, 0);
+			w->move(w->x(), v);
+		}
+		else if (key == "right") {
+			const qint32 v = duk_require_int(ctx, 0);
+			if (parent) w->move(parent->width() - v - w->width(), w->y());
+		}
+		else if (key == "bottom") {
+			const qint32 v = duk_require_int(ctx, 0);
+			if (parent) w->move(w->x(), parent->height() - v - w->height());
+		}
+		else if (key == "style") {
+			if (CWidget::styleBuilder.contains(w)) {
+				const char* v = duk_require_string(ctx, 0);
+				CWidget::styleBuilder[w].SetStyles(QString::fromUtf8(v));
+				w->setStyleSheet(CWidget::styleBuilder[w].ToString());
+			}
+		}
+		return 0;
 	}
 	JS_API duk_ret_t JsParser::ConsoleLog(duk_context* ctx) {
 		duk_push_string(ctx, " ");//往栈顶压入分隔符
@@ -221,6 +301,31 @@ namespace ysp::qt::html {
 	void JSBinder::bindMethod(const char* name, duk_c_function func, int args) {
 		duk_push_c_function(ctx, func, args);
 		duk_put_prop_string(ctx, -2, name);
+	}
+
+	void JSBinder::bindAttributeMethod(const char* name, duk_c_function get, duk_c_function set) {
+		duk_uint_t flags = DUK_DEFPROP_ENUMERABLE | DUK_DEFPROP_CONFIGURABLE;
+		duk_push_string(ctx, name); // key
+		if (get) {
+			duk_push_c_function(ctx, get, 0);
+			flags |= DUK_DEFPROP_HAVE_GETTER;
+			if (set) {
+				duk_push_c_function(ctx, set, 1); // setter(value)
+				flags |= DUK_DEFPROP_HAVE_SETTER;
+				duk_def_prop(ctx, -4, flags);     // obj在-4
+			}
+			else {
+				duk_def_prop(ctx, -3, flags);     // obj在-3
+			}
+		}
+		else if (set) {
+			duk_push_c_function(ctx, set, 1);
+			flags |= DUK_DEFPROP_HAVE_SETTER;
+			duk_def_prop(ctx, -3, flags);         // obj在-3（只有 key+setter）
+		}
+		else {
+			duk_pop(ctx); // 既无get也无set，丢弃key
+		}
 	}
 
 	void JSBinder::bindSubObject(const char* name) {

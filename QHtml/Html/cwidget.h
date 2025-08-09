@@ -5,13 +5,16 @@
 #pragma once
 #include <atomic>
 #include <QString>
+#include <QMap>
 #include <QWidget>
 #include "jsparser.h"
 #include "consolewindow.h"
+#include "stylebuilder.h"
 namespace ysp::qt::html {
 	class CWidget: public QWidget {
 	public:
 		static JsParser jsParser;
+		static QMap<QWidget*,StyleBuilder> styleBuilder;
 		CWidget(QWidget* parent = nullptr);
 		~CWidget() {};
 		void TriggerEvent(const QString& key);

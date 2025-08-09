@@ -148,7 +148,8 @@ namespace ysp::qt::html {
 				}
 			}
 		}
-		StyleBuilder builder(widget);
+		CWidget::styleBuilder[widget] = StyleBuilder(widget);
+		auto& builder = CWidget::styleBuilder[widget];
 		//优先判断是否有style修饰，优先解析style中的值
 		if (attributes.contains("style")) {
 			QMap<QString, QString> styleattributes;

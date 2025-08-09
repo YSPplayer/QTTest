@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 namespace ysp::qt::html {
 	JsParser CWidget::jsParser;
+	QMap<QWidget*, StyleBuilder> CWidget::styleBuilder;
 	std::atomic<ConsoleWindow*> CWidget::consoleWindow(nullptr);
 	CWidget::CWidget(QWidget* parent):QWidget(parent){
 		isPressedLeft = false;

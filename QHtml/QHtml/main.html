@@ -17,11 +17,17 @@
 		const main = function() {
 		console.log('ho to bug 你好 世界!');
 		const div = document.getElementById('dds');
-		div._elementId = 10;
-		console.log('div width:' + div._elementId);
-		console.log('div width:' + div.width);
-		console.log('div height:' + div.height);
-		console.log('div height:' + typeof(div.height));
+		// console.log('div id:' + div.id);
+		div.top = 0;
+		div.left = 0;
+		div.width = 1000;
+		div.height = 1000;
+		//{ border-radius: 5px 50px 5px 20px; background-color: #38DAD8; }
+		div.style = 'border-radius: 0px 0px 0px 0px';
+		// console.log('div2 width:' + div.width);
+		// console.log('div2 height:' + div.height);
+		// console.log('div2 height type:' + typeof(div.height));
+		console.log('style:' + div.style);
 		div.addEventListener('click',function() {
 		var s = 10;
 		console.log('click 呀 好家伙');

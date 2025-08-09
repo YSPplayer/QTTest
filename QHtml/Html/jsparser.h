@@ -21,6 +21,15 @@ namespace ysp::qt::html {
 #define JS_TYPE_CLASS 4
 #define JS_TYPE_ARRAY 5
 #define JS_TYPE_UNDEFINED 6
+#define K_PTRKEY "K_WIDGET_PTRKEY"
+#define DUK_GETTER(prop) \
+    [](duk_context* ctx)->duk_ret_t { \
+        return GetValue(ctx, prop); \
+    }
+#define DUK_SETTER(prop) \
+    [](duk_context* ctx)->duk_ret_t { \
+        return SetValue(ctx, prop); \
+    }
 	class JsValue;
 	using JsClass = std::map<QString, std::shared_ptr<JsValue>>;
 	using JsArray = std::vector<std::shared_ptr<JsValue>>;
@@ -45,6 +54,7 @@ namespace ysp::qt::html {
 		~JSBinder() = default;
 		void beginObject();
 		void bindMethod(const char* name, duk_c_function func, int args);
+		void bindAttributeMethod(const char* name, duk_c_function get, duk_c_function set);
 		void bindSubObject(const char* name);
 		void endSubObject();
 		void setGlobal(const char* name);
@@ -68,6 +78,9 @@ namespace ysp::qt::html {
 		void PushJsObject(const JsClass* obj);
 		void PushJsArray(const JsArray* arr); 
 		//func//
+		static QWidget* ThisWidget(duk_context* ctx);
+		static duk_ret_t GetValue(duk_context* ctx, const char* name);
+		static duk_ret_t SetValue(duk_context* ctx, const char* name);
 		JS_API static duk_ret_t ConsoleLog(duk_context* ctx);
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
