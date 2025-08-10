@@ -21,7 +21,8 @@ namespace ysp::qt::html {
 #define JS_TYPE_CLASS 4
 #define JS_TYPE_ARRAY 5
 #define JS_TYPE_UNDEFINED 6
-#define K_PTRKEY "K_WIDGET_PTRKEY"
+#define K_PTRKEY "_K_WIDGET_PTRKEY"
+#define JSPARSER "_JSPARSER_JSVALUE"
 #define DUK_GETTER(prop) \
     [](duk_context* ctx)->duk_ret_t { \
         return GetValue(ctx, prop); \
@@ -70,9 +71,10 @@ namespace ysp::qt::html {
 		void Trigger(const QString& callbackType);
 		void CreateDocument(QWidget* widget);
 	private:
-		static QList<QWidget*> objects;
+		QList<QWidget*> objects;
 		duk_context* ctx;
 		JSBinder* binder;
+		static void CreateDocument(QWidget* widget,JsParser* js);
 		void BindJsFunc();
 		void PushJsValue(const std::shared_ptr<JsValue>& value);
 		void PushJsObject(const JsClass* obj);
@@ -85,6 +87,7 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementById(duk_context* ctx);
+		JS_API static duk_ret_t CreateElement(duk_context* ctx);
 		//func//
 	};
 }

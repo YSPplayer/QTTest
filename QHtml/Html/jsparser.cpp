@@ -11,7 +11,6 @@ namespace ysp::qt::html {
 	栈顶索引 -1 栈底索引0
 	入栈是往栈顶添加
 	*/
-	QList<QWidget*> JsParser::objects;
 	JsParser::JsParser() {
 		ctx = nullptr;
 		binder = nullptr;
@@ -60,6 +59,8 @@ namespace ysp::qt::html {
 		return success;
 	}
 	void JsParser::BindJsFunc() {
+		duk_push_pointer(ctx, this);
+		duk_put_global_string(ctx, JSPARSER); //设置自己为全局变量
 		binder->beginObject();
 		binder->bindMethod("log", ConsoleLog, DUK_VARARGS);
 		binder->setGlobal("console");
@@ -156,7 +157,7 @@ namespace ysp::qt::html {
 	/// 创建对象
 	/// </summary>
 	void JsParser::CreateDocument(QWidget* widget) {
-		if (!widget || widget->objectName() == "" || objects.contains(widget)) return;
+		if (!widget || objects.contains(widget)) return;
 		objects.append(widget);
 		duk_push_object(ctx);
 		//压入指针
@@ -169,11 +170,10 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("bottom", DUK_GETTER("bottom"), DUK_SETTER("bottom"));
 		binder->bindAttributeMethod("left", DUK_GETTER("left"), DUK_SETTER("left"));
 		binder->bindAttributeMethod("right", DUK_GETTER("right"), DUK_SETTER("right"));
+		binder->bindAttributeMethod("visible", DUK_GETTER("visible"), DUK_SETTER("visible"));
 		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
-		const QString& id = widget->objectName();
-		QString globalKey = QString("element_%1").arg(id.toUtf8().constData());
-		duk_put_global_string(ctx, globalKey.toUtf8().constData()); 
+		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
 	}
 	QWidget* JsParser::ThisWidget(duk_context* ctx) {
 		duk_push_this(ctx);
@@ -204,8 +204,13 @@ namespace ysp::qt::html {
 				duk_push_string(ctx, CWidget::styleBuilder.contains(w) ?
 					CWidget::styleBuilder[w].GetStyles().toUtf8().constData() : "");
 			}
+			else if (key == "visible") {
+				bool sd = w->isVisible();
+				duk_push_boolean(ctx, w->isVisible());
+			} 
 			return 1;//返回值表示弹出
 		}
+
 		duk_push_undefined(ctx); 
 		return 1;
 	}
@@ -217,35 +222,47 @@ namespace ysp::qt::html {
 		const QString key(name);
 
 		if (key == "width") {
+			if(!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			w->resize(v, w->height());
 		}
 		else if (key == "height") {
+			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			w->resize(w->width(), v);
 		}
 		else if (key == "left") {
+			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			w->move(v, w->y());
 		}
 		else if (key == "top") {
+			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			w->move(w->x(), v);
 		}
 		else if (key == "right") {
+			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			if (parent) w->move(parent->width() - v - w->width(), w->y());
 		}
 		else if (key == "bottom") {
+			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			const qint32 v = duk_require_int(ctx, 0);
 			if (parent) w->move(w->x(), parent->height() - v - w->height());
 		}
 		else if (key == "style") {
+			if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
 			if (CWidget::styleBuilder.contains(w)) {
 				const char* v = duk_require_string(ctx, 0);
 				CWidget::styleBuilder[w].SetStyles(QString::fromUtf8(v));
 				w->setStyleSheet(CWidget::styleBuilder[w].ToString());
 			}
+		}
+		else if (key == "visible") {
+			if (!duk_is_boolean(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			const bool v = duk_require_boolean(ctx, 0);
+			v ? w->show() : w->hide();
 		}
 		return 0;
 	}
@@ -269,13 +286,10 @@ namespace ysp::qt::html {
 		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
 		const char* callbackType = duk_require_string(ctx, 0);
 		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
-		duk_push_this(ctx);
-		duk_get_prop_string(ctx, -1, "id");
-		const char* id = duk_require_string(ctx, -1);
-		const QString& key = QString::fromUtf8(id) + QString::fromUtf8(callbackType);
-		duk_dup(ctx, 1);
+		QWidget* w = ThisWidget(ctx);
+		if (!w) return DUK_RET_ERROR;
+		const QString& key = CWidget::GetKeyString(w) + QString::fromUtf8(callbackType);
 		duk_put_global_string(ctx, key.toUtf8().constData());
-		duk_pop(ctx);
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::DocumentGetElementById(duk_context* ctx) {
@@ -283,16 +297,40 @@ namespace ysp::qt::html {
 		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
 		const char* elementId = duk_require_string(ctx, 0);
 		const QString& id = QString::fromUtf8(elementId);
-		const QString& globalKey = QString("element_%1").arg(id);
-		duk_get_global_string(ctx, globalKey.toUtf8().constData());
-		if (!duk_is_undefined(ctx, -1)) {
-			return 1;
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [id](QWidget* widget)->bool {
+			return CWidget::GetId(widget) == id;
+		});
+		if (widegts.count() > 0 && widegts[0]) {
+			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
+			duk_get_global_string(ctx, globalKey.toUtf8().constData());
+			if (!duk_is_undefined(ctx, -1)) {
+				return 1;
+			}
+			else {
+				duk_pop(ctx);
+				duk_push_null(ctx);
+				return 1;
+			}
 		}
 		else {
-			duk_pop(ctx);
 			duk_push_null(ctx);
-			return 1;  
+			return 1;
 		}
+	}
+	JS_API duk_ret_t JsParser::CreateElement(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+		const QString& classname = QString::fromUtf8(duk_require_string(ctx, 0)).trimmed().toLower();
+		QWidget* widget = nullptr;
+		if (classname == "div") widget = new QWidget();
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		ptr->CreateDocument(widget);
+		return DocumentGetElementById(ctx);
 	}
 	void JSBinder::beginObject() {
 		duk_push_object(ctx);

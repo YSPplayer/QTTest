@@ -20,6 +20,10 @@ namespace ysp::qt::html {
 		void TriggerEvent(const QString& key);
 		static void ShowConsoleWindow(bool show);
 		static void AppendConsoleWindowMsg(const QString& text);
+		static QString GetId(QWidget* widget);
+		static QString GetClass(QWidget* widget);
+		static QString GetClassName(QWidget* widget);
+		static QString GetKeyString(QWidget* widget);
 	protected:
 		void mousePressEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;

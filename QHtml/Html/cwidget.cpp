@@ -26,6 +26,20 @@ namespace ysp::qt::html {
 		CheckConsoleWindow();
 		emit consoleWindow.load()->appendText(text);
 	}
+	QString CWidget::GetId(QWidget* widget) {
+		return widget->objectName();
+	}
+
+	QString CWidget::GetClass(QWidget* widget) {
+		return  widget->property("class").isValid() ?
+			widget->property("class").toString() : "";
+	}
+	QString CWidget::GetClassName(QWidget* widget) {
+		return widget->metaObject()->className();
+	}
+	QString CWidget::GetKeyString(QWidget* widget) {
+		return QString("%1%2%3%4").arg(GetClassName(widget)).arg(GetId(widget)).arg(GetClass(widget)).arg(QString::number(reinterpret_cast<quintptr>(widget), 16));
+	}
 	void CWidget::mousePressEvent(QMouseEvent* event) {
 		auto button = event->button();
 		if (button == Qt::LeftButton) {
@@ -52,7 +66,7 @@ namespace ysp::qt::html {
 	}
 
 	QString CWidget::TriggerId(const QString& key) {
-		return QString("%1%2").arg(objectName()).arg(key);
+		return QString("%1%2").arg(GetKeyString(this)).arg(key);
 	}
 
 	void CWidget::CheckConsoleWindow() {
