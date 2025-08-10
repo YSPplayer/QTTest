@@ -40,7 +40,7 @@ namespace ysp::qt::html {
 		const QString p = prop.trimmed().toLower();
 		const QString v = value.trimmed();
 		if (p.isEmpty()) return *this;
-		// ²éÕÒÊÇ·ñÒÑ´æÔÚ¸ÃÊôĞÔ£¬´æÔÚÔòÌæ»»
+		// æŸ¥æ‰¾æ˜¯å¦å·²å­˜åœ¨è¯¥å±æ€§ï¼Œå­˜åœ¨åˆ™æ›¿æ¢
 		for (qint32 i = 0; i < styles.size(); ++i) {
 			const QString s = styles[i].trimmed();
 			const qint32 colon = s.indexOf(':');
@@ -52,7 +52,7 @@ namespace ysp::qt::html {
 				}
 			}
 		}
-		// ²»´æÔÚÔò×·¼Ó
+		// ä¸å­˜åœ¨åˆ™è¿½åŠ 
 		styles.append(QString("%1: %2;").arg(prop).arg(v));
 		return *this;
 	}
@@ -63,7 +63,7 @@ namespace ysp::qt::html {
 			const QString decl = raw.trimmed();
 			if (decl.isEmpty()) continue;
 			const qint32 colon = decl.indexOf(':');
-			if (colon <= 0) continue; // ·Ç·¨ÉùÃ÷£¬Ìø¹ı
+			if (colon <= 0) continue; // éæ³•å£°æ˜ï¼Œè·³è¿‡
 			const QString prop = decl.left(colon).trimmed();
 			const QString value = decl.mid(colon + 1).trimmed();
 			SetStyle(prop, value);

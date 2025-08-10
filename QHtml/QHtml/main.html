@@ -17,19 +17,25 @@
 		const main = function() {
 		console.log('ho to bug 你好 世界!');
 		const div = document.getElementById('dds');
-		// console.log('div id:' + div.id);
 		div.bottom = 0;
 		div.right = 0;
 		div.width = 500;
 		div.height = 500;
-		//{ border-radius: 5px 50px 5px 20px; background-color: #38DAD8; }
+		div.visible = true;
 		div.style = 'border-radius: 0px 0px 0px 0px';
+		//div.style = 'background-color:blue';
+		//div.style = 'border-radius: 0px 0px 0px 0px';
 		console.log('visible:' + div.visible);
 		console.log('bottom:' + div.bottom);
-		// console.log('div2 width:' + div.width);
-		// console.log('div2 height:' + div.height);
-		// console.log('div2 height type:' + typeof(div.height));
 		console.log('style:' + div.style);
+		// var div2 = document.createElement('div');
+		// //div2.style = 'background-color:red';
+		// div2.width = 100;
+		// div2.height = 100;
+		// div2.left = 0;
+		// div2.top = 0;
+		// div2.visible = true;
+		// div.appendChild(div2);
 		div.addEventListener('click',function() {
 		var s = 10;
 		console.log('click 呀 好家伙');

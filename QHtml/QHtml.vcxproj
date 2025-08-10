@@ -126,8 +126,8 @@
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h" />
     <QtMoc Include="Html\consolewindow.h" />
-    <ClInclude Include="Html\cwidget.h" />
-    <ClInclude Include="Html\htmlreader.h" />
+    <QtMoc Include="Html\cwidget.h" />
+    <QtMoc Include="Html\htmlreader.h" />
     <ClInclude Include="Html\jsparser.h" />
     <ClInclude Include="Html\linkbridge.h" />
     <ClInclude Include="Html\listfilter.h" />

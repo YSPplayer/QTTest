@@ -18,7 +18,19 @@ namespace ysp::qt::html {
         connect(this, &ConsoleWindow::appendText, this, &ConsoleWindow::AppendText);
 	}
     void ConsoleWindow::AppendText(const QString& text) {
-        textEdit->append(text);
+        if (text.trimmed().startsWith("TypeError", Qt::CaseInsensitive)) {
+            // 设置错误颜色（红色）
+            QTextCharFormat errorFormat;
+            errorFormat.setForeground(QColor(220, 53, 69)); // 红色
+            // 应用格式并添加文本
+            QTextCursor cursor = textEdit->textCursor();
+            cursor.movePosition(QTextCursor::End);
+            cursor.insertText("\n"+ text, errorFormat);
+        }
+        else {
+            // 使用默认颜色
+            textEdit->append(text);
+        }
         // 自动滚动到底部
         QTextCursor cursor = textEdit->textCursor();
         cursor.movePosition(QTextCursor::End);

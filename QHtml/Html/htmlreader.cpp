@@ -39,7 +39,9 @@ namespace ysp::qt::html {
 			}
 		}
 		CWidget* widget = ElementsToQWidegt(elements,cssrules,*jsParser);
-		widget->TriggerEvent("load");
+		connect(widget, &CWidget::shown, this, [widget]() {
+			widget->TriggerEvent("load");
+		});
 		return widget;
 	}
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser) {

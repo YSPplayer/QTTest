@@ -12,6 +12,7 @@
 #include "stylebuilder.h"
 namespace ysp::qt::html {
 	class CWidget: public QWidget {
+		Q_OBJECT
 	public:
 		static JsParser jsParser;
 		static QMap<QWidget*,StyleBuilder> styleBuilder;
@@ -27,10 +28,14 @@ namespace ysp::qt::html {
 	protected:
 		void mousePressEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;
+		void showEvent(QShowEvent* event) override;
 	private:
 		bool isPressedLeft;
+		bool firstshow;
 		QString TriggerId(const QString& key);
 		static void CheckConsoleWindow();
 		static std::atomic<ConsoleWindow*> consoleWindow;
+	signals:
+		void shown();
 	};
 }

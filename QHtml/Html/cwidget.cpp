@@ -10,11 +10,13 @@ namespace ysp::qt::html {
 	std::atomic<ConsoleWindow*> CWidget::consoleWindow(nullptr);
 	CWidget::CWidget(QWidget* parent):QWidget(parent){
 		isPressedLeft = false;
+		firstshow = false;
 		setMouseTracking(true);
+		//setAutoFillBackground(true);
 	}
 	void CWidget::TriggerEvent(const QString& key) {
 		if (key == "load") {
-			//UI加载完毕之后触发
+			//UI鍔犺浇瀹屾瘯涔嬪悗瑙﹀彂
 			jsParser.Trigger("load");
 		}
 	}
@@ -63,6 +65,14 @@ namespace ysp::qt::html {
 			1 : button == Qt::RightButton ? 2 : -1);
 		jsParser.Trigger(TriggerId("mouseup"), JsValue::CreateValue(obj));
 		QWidget::mouseReleaseEvent(event);
+	}
+
+	void CWidget::showEvent(QShowEvent* event) {
+		if (!firstshow) {
+			firstshow = true;
+			emit shown();
+		}
+		QWidget::showEvent(event);
 	}
 
 	QString CWidget::TriggerId(const QString& key) {

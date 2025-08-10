@@ -74,7 +74,6 @@ namespace ysp::qt::html {
 		QList<QWidget*> objects;
 		duk_context* ctx;
 		JSBinder* binder;
-		static void CreateDocument(QWidget* widget,JsParser* js);
 		void BindJsFunc();
 		void PushJsValue(const std::shared_ptr<JsValue>& value);
 		void PushJsObject(const JsClass* obj);
@@ -87,6 +86,7 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementById(duk_context* ctx);
+		JS_API static duk_ret_t Append(duk_context* ctx);
 		JS_API static duk_ret_t CreateElement(duk_context* ctx);
 		//func//
 	};

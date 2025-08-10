@@ -5,6 +5,7 @@
 #pragma once
 #include <memory>
 #include <QXmlStreamReader>
+#include <QObject>
 #include <QWidget>
 #include <QMap>
 #include <QList>
@@ -18,7 +19,8 @@ namespace ysp::qt::html {
 		QMap<QString, QString> attributes{};
 		QString text{""};
 	};
-	class HtmlReader {
+	class HtmlReader :public QObject{
+		Q_OBJECT
 	public:
 		HtmlReader(const QString& filePath);
 		CWidget* Parse();
