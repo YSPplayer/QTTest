@@ -10,12 +10,14 @@
 #include "jsparser.h"
 #include "consolewindow.h"
 #include "stylebuilder.h"
+#include "callback.h"
 namespace ysp::qt::html {
 	class CWidget: public QWidget {
-		Q_OBJECT
+	//	Q_OBJECT 加了之后用不了自定义样式
 	public:
 		static JsParser jsParser;
 		static QMap<QWidget*,StyleBuilder> styleBuilder;
+		CallBack callback;
 		CWidget(QWidget* parent = nullptr);
 		~CWidget() {};
 		void TriggerEvent(const QString& key);
@@ -35,7 +37,5 @@ namespace ysp::qt::html {
 		QString TriggerId(const QString& key);
 		static void CheckConsoleWindow();
 		static std::atomic<ConsoleWindow*> consoleWindow;
-	signals:
-		void shown();
 	};
 }

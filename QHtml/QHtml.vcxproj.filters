@@ -61,6 +61,9 @@
     <ClCompile Include="Html\consolewindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Html\callback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Html\stylebuilder.h">
@@ -75,15 +78,18 @@
     <ClInclude Include="Html\linkbridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Html\cwidget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\callback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Html\consolewindow.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="Html\cwidget.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="Html\htmlreader.h">

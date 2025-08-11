@@ -23,6 +23,7 @@ namespace ysp::qt::html {
 #define JS_TYPE_UNDEFINED 6
 #define K_PTRKEY "_K_WIDGET_PTRKEY"
 #define JSPARSER "_JSPARSER_JSVALUE"
+#define CXX_CUT_JS_CONST_VALUE "CXX_CUT_JS_CONST_VALUE"
 #define DUK_GETTER(prop) \
     [](duk_context* ctx)->duk_ret_t { \
         return GetValue(ctx, prop); \
@@ -86,7 +87,9 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementById(duk_context* ctx);
+		JS_API static duk_ret_t DocumentGetElementByKey(duk_context* ctx);
 		JS_API static duk_ret_t Append(duk_context* ctx);
+		JS_API static duk_ret_t Remove(duk_context* ctx);
 		JS_API static duk_ret_t CreateElement(duk_context* ctx);
 		//func//
 	};

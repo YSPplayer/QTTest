@@ -25,14 +25,14 @@ namespace ysp::qt::html {
 		return success;
 	}
 	JsParser::~JsParser() {
-	/*	if (ctx) {
+		if (ctx) {
 			duk_destroy_heap(ctx);
 			ctx = nullptr;
 		} 
 		if (binder) {
 			delete binder;
 			binder = nullptr;
-		}*/
+		}
 	}
 	/// <summary>
 	/// 运行Js
@@ -71,7 +71,8 @@ namespace ysp::qt::html {
 
 		binder->beginObject();
 		binder->bindMethod("getElementById", DocumentGetElementById, 1);
-		/*binder->bindMethod("createElement", CreateElement, 1);*/
+		binder->bindMethod("getElementByKey", DocumentGetElementByKey, 1);
+		binder->bindMethod("createElement", CreateElement, 1);
 		binder->setGlobal("document");
 	}
 	void JsParser::PushJsValue(const std::shared_ptr<JsValue>& value) {
@@ -174,7 +175,8 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("visible", DUK_GETTER("visible"), DUK_SETTER("visible"));
 		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
-		//binder->bindMethod("append", Append, 1);
+		binder->bindMethod("append", Append, 1);
+		binder->bindMethod("remove", Remove, 1);
 		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
 	}
 	QWidget* JsParser::ThisWidget(duk_context* ctx) {
@@ -280,7 +282,18 @@ namespace ysp::qt::html {
 		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
 		const char* callbackType = duk_require_string(ctx, 0);
 		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
-		duk_put_global_string(ctx, callbackType);
+		qint32 index = 0;//实现插入多个函数，以实现可以绑定多个事件
+		while (true) {
+			const char* eventkey = QString(QString(CXX_CUT_JS_CONST_VALUE) + QString::fromUtf8(callbackType) + QString::number(index)).toUtf8().constData();
+			duk_get_global_string(ctx, eventkey);
+			if (!duk_is_function(ctx, -1)) {
+				duk_pop(ctx);
+				duk_put_global_string(ctx, eventkey);
+				break;
+			}
+			duk_pop(ctx);
+			++index;
+		}
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::ObjectAddEventListener(duk_context* ctx) {
@@ -322,23 +335,70 @@ namespace ysp::qt::html {
 			return 1;
 		}
 	}
-	JS_API duk_ret_t JsParser::Append(duk_context* ctx) {
+	JS_API duk_ret_t JsParser::DocumentGetElementByKey(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+		const char* key = duk_require_string(ctx, 0);
+		duk_get_global_string(ctx, key);
+		if (!duk_is_undefined(ctx, -1)) {
+			return 1;
+		}
+		else {
+			duk_pop(ctx);
+			duk_push_null(ctx);
+			return 1;
+		}
+	}
+	JS_API duk_ret_t JsParser::Append(duk_context* ctx) { //参数就是自动压入的函数 require函数就是检查的意思 也就是不压栈 本来数据就在
 		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
 		if (!duk_is_object(ctx, 0))  return DUK_RET_TYPE_ERROR;
-		duk_dup(ctx, 0); //赋值对象到栈顶
 		auto* w = ThisWidget(ctx);
+		if (!w) {
+			return DUK_RET_ERROR;
+		}
+		QWidget* child = nullptr;
+		duk_require_object(ctx, 0);//获取到参数对象
+		duk_get_prop_string(ctx, -1, K_PTRKEY);
+		if (!duk_is_undefined(ctx, -1)) {
+			child = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+			duk_pop_2(ctx);
+			if (child) {
+				child->setParent(w);
+				w->isVisible() ? child->show() : child->hide();
+			}
+			else {
+				return DUK_RET_ERROR;
+			}
+		}
+		else {
+			return DUK_RET_ERROR;
+		}
+		return 0;
+	}
+	JS_API duk_ret_t JsParser::Remove(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_object(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		QWidget* w = ThisWidget(ctx);
 		if (!w) {
 			duk_pop(ctx);
 			return DUK_RET_ERROR;
 		}
 		QWidget* child = nullptr;
-		if (duk_get_prop_string(ctx, -2, K_PTRKEY)) { //会压栈 获取属性一律会压栈
+		duk_require_object(ctx, 0);
+		if (duk_get_prop_string(ctx, -1, K_PTRKEY)) {
 			child = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
-			child->setParent(w);
-			duk_pop_2(ctx); // 弹出属性值和复制的对象
+			duk_pop_2(ctx);
+			if (child) {
+				for (QWidget* widget : w->findChildren<QWidget*>()) {
+					if (widget == child) {
+						child->setParent(nullptr);
+						child->deleteLater();
+						break;
+					}
+				}
+			}
 		}
 		else {
-			duk_pop(ctx); // 弹出复制的对象
 			return DUK_RET_ERROR;
 		}
 		return 0;

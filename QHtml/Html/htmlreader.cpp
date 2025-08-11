@@ -39,7 +39,7 @@ namespace ysp::qt::html {
 			}
 		}
 		CWidget* widget = ElementsToQWidegt(elements,cssrules,*jsParser);
-		connect(widget, &CWidget::shown, this, [widget]() {
+		widget->callback.Subscribe(CallBackType::Load, [widget](void**) {/*nullptr*/
 			widget->TriggerEvent("load");
 		});
 		return widget;

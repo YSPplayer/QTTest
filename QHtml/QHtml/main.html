@@ -11,7 +11,7 @@
 <body>
 	<div id="dds" style="width: 500;height:600 ;border-radius:5 50 5 20" right ="50" bottom ="0">
 		<div width="50" height ="100" left ="50" top ="10" 
-			 background-color="#2CA83B"> </div>
+			 background-color="#2CA83B" onclick="removeDiv()"> </div>
 	</div>
 	<script>
 		const main = function() {
@@ -23,23 +23,31 @@
 		div.height = 500;
 		div.visible = true;
 		div.style = 'border-radius: 0px 0px 0px 0px';
-		//div.style = 'background-color:blue';
 		//div.style = 'border-radius: 0px 0px 0px 0px';
 		console.log('visible:' + div.visible);
 		console.log('bottom:' + div.bottom);
 		console.log('style:' + div.style);
-		// var div2 = document.createElement('div');
-		// //div2.style = 'background-color:red';
-		// div2.width = 100;
-		// div2.height = 100;
-		// div2.left = 0;
-		// div2.top = 0;
-		// div2.visible = true;
-		// div.appendChild(div2);
-		div.addEventListener('click',function() {
-		var s = 10;
-		console.log('click 呀 好家伙');
-		})
+		const div2 = document.createElement('div');
+		div2.style = 'background-color:red';
+		div2.width = 154;
+		div2.height = 99;
+		div2.left = 10;
+		div2.top = 50;
+		div2.visible = true;
+		div.append(div2);
+		//div.remove(div2);
+		// div.addEventListener('click',function() {
+		// 	var ss = document.getElementById('dds');
+		// 	ss.remove();
+		// })
+		div.addEventListener('click', (function(elementToRemove) {
+            return function() {
+                console.log('移除的元素:', elementToRemove);
+                const ss = document.getElementById('dds');
+                ss.remove(elementToRemove);
+            };
+        })(div2));
+
 		div.addEventListener('mouseup',function(e) {
 		console.log(e.button);
 		})

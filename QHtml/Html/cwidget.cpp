@@ -12,7 +12,7 @@ namespace ysp::qt::html {
 		isPressedLeft = false;
 		firstshow = false;
 		setMouseTracking(true);
-		//setAutoFillBackground(true);
+		setAutoFillBackground(true);
 	}
 	void CWidget::TriggerEvent(const QString& key) {
 		if (key == "load") {
@@ -70,7 +70,7 @@ namespace ysp::qt::html {
 	void CWidget::showEvent(QShowEvent* event) {
 		if (!firstshow) {
 			firstshow = true;
-			emit shown();
+			callback.Publish(CallBackType::Load);
 		}
 		QWidget::showEvent(event);
 	}

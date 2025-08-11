@@ -113,6 +113,7 @@
     <QtRcc Include="QHtml.qrc" />
     <QtUic Include="QHtml.ui" />
     <QtMoc Include="QHtml.h" />
+    <ClCompile Include="Html\callback.cpp" />
     <ClCompile Include="Html\consolewindow.cpp" />
     <ClCompile Include="Html\cssparser.cpp" />
     <ClCompile Include="Html\cwidget.cpp" />
@@ -126,7 +127,8 @@
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h" />
     <QtMoc Include="Html\consolewindow.h" />
-    <QtMoc Include="Html\cwidget.h" />
+    <ClInclude Include="Html\callback.h" />
+    <ClInclude Include="Html\cwidget.h" />
     <QtMoc Include="Html\htmlreader.h" />
     <ClInclude Include="Html\jsparser.h" />
     <ClInclude Include="Html\linkbridge.h" />
