@@ -19,6 +19,7 @@ namespace ysp::qt::html {
         void appendText(const QString& text);
     private:
         void AppendText(const QString& text);
+        bool first;
         QTextEdit* textEdit;
         QPushButton* clearButton;
     };

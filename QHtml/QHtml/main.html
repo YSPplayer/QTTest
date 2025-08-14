@@ -14,6 +14,12 @@
 			 background-color="#2CA83B" onclick="removeDiv()"> </div>
 	</div>
 	<script>
+		// var removeDiv = function() {
+		// 	console.log('removeDiv');
+		// }
+		function removeDiv() {
+    		console.log('removeDiv454545');
+		}
 		const main = function() {
 		console.log('ho to bug 你好 世界!');
 		const div = document.getElementById('dds');
@@ -28,7 +34,7 @@
 		console.log('bottom:' + div.bottom);
 		console.log('style:' + div.style);
 		const div2 = document.createElement('div');
-		div2.style = 'background-color:red';
+		div2.style = 'background-color:blue';
 		div2.width = 154;
 		div2.height = 99;
 		div2.left = 10;
@@ -45,6 +51,7 @@
                 console.log('移除的元素:', elementToRemove);
                 const ss = document.getElementById('dds');
                 ss.remove(elementToRemove);
+				elementToRemove = null;
             };
         })(div2));
 
@@ -57,6 +64,7 @@
 		};
 		window.addEventListener('load', function() {
 		main();
+		console.log('load');
 		});
 	</script>
 </body>

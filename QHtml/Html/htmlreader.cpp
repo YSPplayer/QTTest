@@ -231,6 +231,18 @@ namespace ysp::qt::html {
 				builder.SetBorderRadius(value.toInt());
 			}
 		}
+		else if (lkey == "onclick") { //增加触发事件
+			const QString& func = ExtractFuncString(value);
+			QString jsscript = QString(R"(
+			window.addEventListener('load', function() {
+			  var div = document.getElementByKey('%1');
+			  if(div !== null) {
+				div.addEventListener('click',%2);
+				}
+			});
+			)").arg(CWidget::GetKeyString(widget).toUtf8().constData()).arg(func);
+			CWidget::jsParser.RunJs(jsscript.toUtf8().constData());
+		}
 	}
 	
 	bool HtmlReader::ContainsKey(QMap<QString, QString>& map,const QString& key) {
@@ -256,6 +268,11 @@ namespace ysp::qt::html {
 	QString HtmlReader::QClassToHtmlClass(const QString& name) {
 		if (name == "QWidegt") return "div";
 		return "";
+	}
+
+	QString HtmlReader::ExtractFuncString(const QString& input) {
+		qint32 pos = input.indexOf('(');
+		return (pos != -1) ? input.left(pos) : input;
 	}
 
 	CWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules, JsParser& jsparser) {

@@ -36,5 +36,6 @@ namespace ysp::qt::html {
 		static bool ContainsKey(QMap<QString, QString>& map,const QString& key);
 		static QList<QString> Split(const QString& key,const QString& split);
 		static QString QClassToHtmlClass(const QString& name);
+		static QString ExtractFuncString(const QString& input);
 	};
 }

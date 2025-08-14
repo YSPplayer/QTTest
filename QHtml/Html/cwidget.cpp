@@ -17,7 +17,7 @@ namespace ysp::qt::html {
 	void CWidget::TriggerEvent(const QString& key) {
 		if (key == "load") {
 			//UI加载完毕之后触发
-			jsParser.Trigger("load");
+			jsParser.Trigger("load",true);
 		}
 	}
 	void CWidget::ShowConsoleWindow(bool show) {

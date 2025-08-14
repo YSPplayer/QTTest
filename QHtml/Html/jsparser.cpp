@@ -125,34 +125,46 @@ namespace ysp::qt::html {
 		}
 	}
 
-	void JsParser::Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params) {
+	void JsParser::Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params, bool global) {
 		if (!ctx) {
 			return;
 		}
-		duk_get_global_string(ctx, callbackType.toUtf8().constData());
-		if (duk_is_function(ctx, -1)) {
-			// 将所有参数推入栈
-			for (const auto& param : params) {
-				PushJsValue(param);
+		//调用所有绑定的事件
+		qint32 index = 0;
+		while (true) {
+			if (global) {
+				duk_get_global_string(ctx, QString(QString(CXX_CUT_JS_CONST_VALUE) + callbackType + QString::number(index)).toUtf8().constData());
 			}
-			// 调用回调函数
-			if (duk_pcall(ctx, params.size()) != 0) {
-				LinkBridge::Print(duk_safe_to_string(ctx, -1));
+			else {
+				duk_get_global_string(ctx, QString(callbackType + QString::number(index)).toUtf8().constData());
 			}
-			duk_pop(ctx);
+			if (duk_is_function(ctx, -1)) {
+				// 将所有参数推入栈
+				for (const auto& param : params) {
+					PushJsValue(param);
+				}
+				// 调用回调函数
+				if (duk_pcall(ctx, params.size()) != 0) {
+					LinkBridge::Print(duk_safe_to_string(ctx, -1));
+				}
+				duk_pop(ctx);
+				++index;
+			}
+			else {
+				//不存在数据，不用管
+				duk_pop(ctx);
+				break;
+			}
 		}
-		else {
-			//不存在数据，不用管
-			duk_pop(ctx);
-		}
+		
 	}
-	void JsParser::Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param) {
+	void JsParser::Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param, bool global) {
 		const std::vector<std::shared_ptr<JsValue>>& params = { param };
-		Trigger(callbackType, params);
+		Trigger(callbackType, params, global);
 	}
-	void JsParser::Trigger(const QString& callbackType) {
+	void JsParser::Trigger(const QString& callbackType, bool global) {
 		const std::vector<std::shared_ptr<JsValue>> params;
-		Trigger(callbackType, params);
+		Trigger(callbackType, params, global);
 	}
 
 	/// <summary>
@@ -178,6 +190,11 @@ namespace ysp::qt::html {
 		binder->bindMethod("append", Append, 1);
 		binder->bindMethod("remove", Remove, 1);
 		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
+	}
+
+	duk_ret_t JsParser::ThrowError(duk_context* ctx,duk_ret_t code, const QString& error) {
+		duk_type_error(ctx, error.toUtf8().constData());
+		return code;
 	}
 	QWidget* JsParser::ThisWidget(duk_context* ctx) {
 		duk_push_this(ctx);
@@ -209,7 +226,6 @@ namespace ysp::qt::html {
 					CWidget::styleBuilder[w].GetStyles().toUtf8().constData() : "");
 			}
 			else if (key == "visible") {
-				bool sd = w->isVisible();
 				duk_push_boolean(ctx, w->isVisible());
 			} 
 			return 1;//返回值表示弹出
@@ -226,37 +242,44 @@ namespace ysp::qt::html {
 		const QString key(name);
 
 		if (key == "width") {
-			if(!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if(!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			w->resize(v, w->height());
 		}
 		else if (key == "height") {
-			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_number(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			w->resize(w->width(), v);
 		}
 		else if (key == "left") {
-			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			w->move(v, w->y());
 		}
 		else if (key == "top") {
-			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			w->move(w->x(), v);
 		}
 		else if (key == "right") {
-			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			if (parent) w->move(parent->width() - v - w->width(), w->y());
 		}
 		else if (key == "bottom") {
-			if (!duk_is_number(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			if (parent) w->move(w->x(), parent->height() - v - w->height());
 		}
 		else if (key == "style") {
-			if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not string.");
 			if (CWidget::styleBuilder.contains(w)) {
 				const char* v = duk_require_string(ctx, 0);
 				CWidget::styleBuilder[w].SetStyles(QString::fromUtf8(v));
@@ -264,7 +287,8 @@ namespace ysp::qt::html {
 			}
 		}
 		else if (key == "visible") {
-			if (!duk_is_boolean(ctx, 0)) return DUK_RET_TYPE_ERROR;
+			if (!duk_is_boolean(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not boolean.");
 			const bool v = duk_require_boolean(ctx, 0);
 			v ? w->show() : w->hide();
 		}
@@ -278,17 +302,21 @@ namespace ysp::qt::html {
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::WindowAddEventListener(duk_context* ctx) {
-		if(duk_get_top(ctx) < 2) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		if(duk_get_top(ctx) < 2) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(2) is incorrect");
+		if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
 		const char* callbackType = duk_require_string(ctx, 0);
-		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_function(ctx, 1)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not function.");
 		qint32 index = 0;//实现插入多个函数，以实现可以绑定多个事件
+		QByteArray eventKeyBytes;
 		while (true) {
-			const char* eventkey = QString(QString(CXX_CUT_JS_CONST_VALUE) + QString::fromUtf8(callbackType) + QString::number(index)).toUtf8().constData();
-			duk_get_global_string(ctx, eventkey);
+			eventKeyBytes = QString(QString(CXX_CUT_JS_CONST_VALUE) + QString::fromUtf8(callbackType) + QString::number(index)).toUtf8();
+			duk_get_global_string(ctx, eventKeyBytes.constData());
 			if (!duk_is_function(ctx, -1)) {
 				duk_pop(ctx);
-				duk_put_global_string(ctx, eventkey);
+				duk_put_global_string(ctx, eventKeyBytes.constData());
 				break;
 			}
 			duk_pop(ctx);
@@ -297,19 +325,34 @@ namespace ysp::qt::html {
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::ObjectAddEventListener(duk_context* ctx) {
-		if (duk_get_top(ctx) < 2) return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 2) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(2) is incorrect");
 		if (!duk_is_string(ctx, 0))  return DUK_RET_TYPE_ERROR;
 		const char* callbackType = duk_require_string(ctx, 0);
-		if (!duk_is_function(ctx, 1)) return DUK_RET_TYPE_ERROR;
+		if (!duk_is_function(ctx, 1)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not function.");
 		QWidget* w = ThisWidget(ctx);
 		if (!w) return DUK_RET_ERROR;
-		const QString& key = CWidget::GetKeyString(w) + QString::fromUtf8(callbackType);
-		duk_put_global_string(ctx, key.toUtf8().constData());
+		qint32 index = 0;
+		QByteArray eventKeyBytes;
+		while (true) {
+			eventKeyBytes = QString(CWidget::GetKeyString(w) + QString::fromUtf8(callbackType) + QString::number(index)).toUtf8();
+			duk_get_global_string(ctx, eventKeyBytes.constData());
+			if (!duk_is_function(ctx, -1)) {
+				duk_pop(ctx);
+				duk_put_global_string(ctx, eventKeyBytes.constData());
+				break;
+			}
+			duk_pop(ctx);
+			++index;
+		}
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::DocumentGetElementById(duk_context* ctx) {
-		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
 		const char* elementId = duk_require_string(ctx, 0);
 		const QString& id = QString::fromUtf8(elementId);
 		duk_get_global_string(ctx, JSPARSER);
@@ -336,8 +379,10 @@ namespace ysp::qt::html {
 		}
 	}
 	JS_API duk_ret_t JsParser::DocumentGetElementByKey(duk_context* ctx) {
-		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
 		const char* key = duk_require_string(ctx, 0);
 		duk_get_global_string(ctx, key);
 		if (!duk_is_undefined(ctx, -1)) {
@@ -350,11 +395,14 @@ namespace ysp::qt::html {
 		}
 	}
 	JS_API duk_ret_t JsParser::Append(duk_context* ctx) { //参数就是自动压入的函数 require函数就是检查的意思 也就是不压栈 本来数据就在
-		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_object(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_object(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not object.");
 		auto* w = ThisWidget(ctx);
 		if (!w) {
-			return DUK_RET_ERROR;
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"C++ object is null.");
 		}
 		QWidget* child = nullptr;
 		duk_require_object(ctx, 0);//获取到参数对象
@@ -367,22 +415,30 @@ namespace ysp::qt::html {
 				w->isVisible() ? child->show() : child->hide();
 			}
 			else {
-				return DUK_RET_ERROR;
+				return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+					"C++ object is null.");
 			}
 		}
 		else {
-			return DUK_RET_ERROR;
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"object is undefined.");
 		}
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::Remove(duk_context* ctx) {
-		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_object(ctx, 0))  return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_object(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not object.");
 		QWidget* w = ThisWidget(ctx);
 		if (!w) {
 			duk_pop(ctx);
-			return DUK_RET_ERROR;
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"C++ object is null.");
 		}
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
 		QWidget* child = nullptr;
 		duk_require_object(ctx, 0);
 		if (duk_get_prop_string(ctx, -1, K_PTRKEY)) {
@@ -391,6 +447,7 @@ namespace ysp::qt::html {
 			if (child) {
 				for (QWidget* widget : w->findChildren<QWidget*>()) {
 					if (widget == child) {
+						ptr->objects.removeOne(child);//数组也要移除
 						child->setParent(nullptr);
 						child->deleteLater();
 						break;
@@ -399,13 +456,16 @@ namespace ysp::qt::html {
 			}
 		}
 		else {
-			return DUK_RET_ERROR;
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"object is undefined.");
 		}
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::CreateElement(duk_context* ctx) {
-		if (duk_get_top(ctx) < 1) return DUK_RET_TYPE_ERROR;
-		if (!duk_is_string(ctx, 0)) return DUK_RET_TYPE_ERROR;
+		if (duk_get_top(ctx) < 1)return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
 		const QString& classname = QString::fromUtf8(duk_require_string(ctx, 0)).trimmed().toLower();
 		CWidget* widget = nullptr;
 		if (classname == "div") widget = new CWidget();

@@ -67,9 +67,9 @@ namespace ysp::qt::html {
 		bool Init();
 		~JsParser();
 		bool RunJs(const char* script);
-		void Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params);
-		void Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param);
-		void Trigger(const QString& callbackType);
+		void Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params,bool global = false);
+		void Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param, bool global = false);
+		void Trigger(const QString& callbackType, bool global = false);
 		void CreateDocument(QWidget* widget);
 	private:
 		QList<QWidget*> objects;
@@ -80,6 +80,7 @@ namespace ysp::qt::html {
 		void PushJsObject(const JsClass* obj);
 		void PushJsArray(const JsArray* arr); 
 		//func//
+		static duk_ret_t ThrowError(duk_context* ctx,duk_ret_t code,const QString& error);
 		static QWidget* ThisWidget(duk_context* ctx);
 		static duk_ret_t GetValue(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
