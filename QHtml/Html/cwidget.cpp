@@ -3,22 +3,20 @@
 	2025.8.5
 */
 #include "cwidget.h"
-#include <QMouseEvent>
+#include "linkbridge.h"
 namespace ysp::qt::html {
 	JsParser CWidget::jsParser;
 	QMap<QWidget*, StyleBuilder> CWidget::styleBuilder;
 	std::atomic<ConsoleWindow*> CWidget::consoleWindow(nullptr);
-	CWidget::CWidget(QWidget* parent):QWidget(parent){
+	CWidget::CWidget(bool global,QWidget* parent):global(global),QWidget(parent){
 		isPressedLeft = false;
 		firstshow = false;
 		setMouseTracking(true);
 		setAutoFillBackground(true);
+		setAttribute(Qt::WA_NoChildEventsForParent, true);
 	}
-	void CWidget::TriggerEvent(const QString& key) {
-		if (key == "load") {
-			//UI加载完毕之后触发
-			jsParser.Trigger("load",true);
-		}
+	void CWidget::TriggerGlobalEvent(const QString& key) {
+		jsParser.Trigger(key, true);
 	}
 	void CWidget::ShowConsoleWindow(bool show) {
 		CheckConsoleWindow();
@@ -47,11 +45,13 @@ namespace ysp::qt::html {
 		if (button == Qt::LeftButton) {
 			isPressedLeft = true;
 		}
-		JsClass* obj = new JsClass;
-		(*obj)["button"] = JsValue::CreateValue(button == Qt::LeftButton ? 0 : button == Qt::MiddleButton ?
-			1 : button == Qt::RightButton ? 2 : -1);
-		jsParser.Trigger(TriggerId("mousedown"), JsValue::CreateValue(obj));
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mousedown"), event, global);
 		QWidget::mousePressEvent(event);
+	}
+
+	void CWidget::mouseMoveEvent(QMouseEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mousemove"), event, global);
+		QWidget::mouseMoveEvent(event);
 	}
 
 	void CWidget::mouseReleaseEvent(QMouseEvent* event) {
@@ -60,23 +60,45 @@ namespace ysp::qt::html {
 			isPressedLeft = false;
 			jsParser.Trigger(TriggerId("click"));
 		}
-		JsClass* obj = new JsClass;
-		(*obj)["button"] = JsValue::CreateValue(button == Qt::LeftButton ? 0 : button == Qt::MiddleButton ?
-			1 : button == Qt::RightButton ? 2 : -1);
-		jsParser.Trigger(TriggerId("mouseup"), JsValue::CreateValue(obj));
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mouseup"), event, global);
 		QWidget::mouseReleaseEvent(event);
 	}
 
 	void CWidget::showEvent(QShowEvent* event) {
 		if (!firstshow) {
 			firstshow = true;
-			callback.Publish(CallBackType::Load);
+			if (global) jsParser.Trigger("load", true);
 		}
 		QWidget::showEvent(event);
 	}
 
+	void CWidget::resizeEvent(QResizeEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("resize"), event,global);
+		QWidget::resizeEvent(event);
+	}
+
+	void CWidget::wheelEvent(QWheelEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("wheel"), event, global);
+		QWidget::wheelEvent(event);
+	}
+
+	void CWidget::keyPressEvent(QKeyEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("keydown"), event, global);
+		QWidget::keyPressEvent(event);
+	}
+
+	void CWidget::keyReleaseEvent(QKeyEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("keyup"), event, global);
+		QWidget::keyReleaseEvent(event);
+	}
+
+	void CWidget::closeEvent(QCloseEvent* event) {
+		LinkBridge::TriggerJsEvent(jsParser, TriggerId("close"), event, global);
+		QWidget::closeEvent(event);
+	}
+
 	QString CWidget::TriggerId(const QString& key) {
-		return QString("%1%2").arg(GetKeyString(this)).arg(key);
+		return global ? key : QString("%1%2").arg(GetKeyString(this)).arg(key);
 	}
 
 	void CWidget::CheckConsoleWindow() {

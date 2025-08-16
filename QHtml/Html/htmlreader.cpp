@@ -39,9 +39,9 @@ namespace ysp::qt::html {
 			}
 		}
 		CWidget* widget = ElementsToQWidegt(elements,cssrules,*jsParser);
-		widget->callback.Subscribe(CallBackType::Load, [widget](void**) {/*nullptr*/
-			widget->TriggerEvent("load");
-		});
+		//widget->callback.Subscribe(CallBackType::Load, [widget](void**) {/*nullptr*/
+		//	widget->TriggerGlobalEvent("load");
+		//});
 		return widget;
 	}
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser) {
@@ -277,7 +277,7 @@ namespace ysp::qt::html {
 
 	CWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules, JsParser& jsparser) {
 		QMap<ElementData*, QWidget*> map;
-		CWidget* parent = new CWidget;
+		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
 		for (auto& element : elements) {
 			CWidget* widget = nullptr;

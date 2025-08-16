@@ -44,6 +44,7 @@ namespace ysp::qt::html {
 		static std::shared_ptr<JsValue> CreateValue(qint32 value);
 		static std::shared_ptr<JsValue> CreateValue(double value);
 		static std::shared_ptr<JsValue> CreateValue(bool value);
+		static std::shared_ptr<JsValue> CreateValue(std::string value);
 		static std::shared_ptr<JsValue> CreateValue(JsClass* value);
 		static std::shared_ptr<JsValue> CreateValue(JsArray* value);
 	};

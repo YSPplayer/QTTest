@@ -55,17 +55,40 @@
             };
         })(div2));
 
-		div.addEventListener('mouseup',function(e) {
-		console.log(e.button);
-		})
-		div.addEventListener('mousedown',function(e) {
-			console.log(e.button);
-		})
-		};
+		// div.addEventListener('mousemove',function(e) {
+		// console.log(e.button);
+		// console.log(e.offsetX);
+		// console.log(e.offsetY);
+		// })
+		// div.addEventListener('mousedown',function(e) {
+		// 	console.log(e.button);
+		// 	//console.log(e.button);eventKeyBytes = "eventKeyBytes = "QWidgetdds2347bd75d30resize0""
+		// })
+
+		// window.addEventListener('wheel',function(e) {
+		// 	console.log('wheel');
+		// 	console.log("deltaX",e.deltaX);
+		// 	console.log("deltaY",e.deltaY);
+		// })
+	}
 		window.addEventListener('load', function() {
 		main();
 		console.log('load');
 		});
+		window.addEventListener('close', function() {
+		console.log('close');
+		});
+		// window.addEventListener('keydown', function(e) {
+		// console.log(e.key);
+		// });
+		// window.addEventListener('resize',function(e) {
+		// 	console.log('resize');
+		// 	console.log(e.oldOffsetHeight);
+		// 	console.log(e.oldOffsetWidth);
+		// 	console.log(e.offsetHeight);
+		// 	console.log(e.offsetWidth);
+	
+		// })
 	</script>
 </body>
 </html>

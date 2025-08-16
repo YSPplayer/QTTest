@@ -18,9 +18,9 @@ namespace ysp::qt::html {
 		static JsParser jsParser;
 		static QMap<QWidget*,StyleBuilder> styleBuilder;
 		CallBack callback;
-		CWidget(QWidget* parent = nullptr);
+		CWidget(bool global = false,QWidget* parent = nullptr);
 		~CWidget() {};
-		void TriggerEvent(const QString& key);
+		void TriggerGlobalEvent(const QString& key);
 		static void ShowConsoleWindow(bool show);
 		static void AppendConsoleWindowMsg(const QString& text);
 		static QString GetId(QWidget* widget);
@@ -29,9 +29,17 @@ namespace ysp::qt::html {
 		static QString GetKeyString(QWidget* widget);
 	protected:
 		void mousePressEvent(QMouseEvent* event) override;
+		void mouseMoveEvent(QMouseEvent* event) override;
 		void mouseReleaseEvent(QMouseEvent* event) override;
 		void showEvent(QShowEvent* event) override;
+		void resizeEvent(QResizeEvent* event) override;
+		void wheelEvent(QWheelEvent* event)override;
+		void keyPressEvent(QKeyEvent* event) override;
+		void keyReleaseEvent(QKeyEvent* event) override;
+		void closeEvent(QCloseEvent* event) override;
+
 	private:
+		bool global;//是否为body体父元素，和window直接挂钩
 		bool isPressedLeft;
 		bool firstshow;
 		QString TriggerId(const QString& key);

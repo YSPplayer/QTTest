@@ -114,7 +114,7 @@ namespace ysp::qt::html {
 			const QString& key = it->first;
 			const std::shared_ptr<JsValue>& value = it->second;
 			PushJsValue(value);
-			duk_put_prop_string(ctx, -2, key.toUtf8().constData());
+			duk_put_prop_string(ctx, -2, key.trimmed().toUtf8().constData());
 		}
 	}
 	void JsParser::PushJsArray(const JsArray* arr) {
@@ -560,6 +560,10 @@ namespace ysp::qt::html {
 
 	std::shared_ptr<JsValue> JsValue::CreateValue(bool value) {
 		return std::make_shared<JsValue>(new bool(value), JS_TYPE_BOOL);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateValue(std::string value) {
+		return std::make_shared<JsValue>(new std::string(value), JS_TYPE_STRING);
 	}
 
 	std::shared_ptr<JsValue> JsValue::CreateValue(JsClass* value) {
