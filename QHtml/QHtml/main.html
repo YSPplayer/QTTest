@@ -11,14 +11,29 @@
 <body>
 	<div id="dds" style="width: 500;height:600 ;border-radius:5 50 5 20" right ="50" bottom ="0">
 		<div width="50" height ="100" left ="50" top ="10" 
-			 background-color="#2CA83B" onclick="removeDiv()"> </div>
+			 background-color="#2CA83B"
+			 ondblclick="removeDiv3()"
+			 onmouseleave="removeDiv4()"> </div>
 	</div>
 	<script>
 		// var removeDiv = function() {
 		// 	console.log('removeDiv');
 		// }
-		function removeDiv() {
-    		console.log('removeDiv454545');
+		// function removeDiv() {
+    	// 	console.log('removeDiv454545');
+		// }
+		// function removeDiv2(e) {
+    	// 	console.log('removeDiv2');
+		// 	console.log(e.button);
+		// }
+		function removeDiv3(e) {
+    		console.log('removeDiv3');
+			console.log(e.button);
+			console.log(e.target);
+			console.log("width:" +e.target.width);
+		}
+		function removeDiv4(e) {
+    		console.log('removeDiv4');
 		}
 		const main = function() {
 		console.log('ho to bug 你好 世界!');

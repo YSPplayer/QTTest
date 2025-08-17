@@ -21,6 +21,7 @@ namespace ysp::qt::html {
 #define JS_TYPE_CLASS 4
 #define JS_TYPE_ARRAY 5
 #define JS_TYPE_UNDEFINED 6
+#define JS_TYPE_OBJECT 7
 #define K_PTRKEY "_K_WIDGET_PTRKEY"
 #define JSPARSER "_JSPARSER_JSVALUE"
 #define CXX_CUT_JS_CONST_VALUE "CXX_CUT_JS_CONST_VALUE"
@@ -45,6 +46,7 @@ namespace ysp::qt::html {
 		static std::shared_ptr<JsValue> CreateValue(double value);
 		static std::shared_ptr<JsValue> CreateValue(bool value);
 		static std::shared_ptr<JsValue> CreateValue(std::string value);
+		static std::shared_ptr<JsValue> CreateObjectValue(std::string value);
 		static std::shared_ptr<JsValue> CreateValue(JsClass* value);
 		static std::shared_ptr<JsValue> CreateValue(JsArray* value);
 	};

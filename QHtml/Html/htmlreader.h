@@ -37,5 +37,6 @@ namespace ysp::qt::html {
 		static QList<QString> Split(const QString& key,const QString& split);
 		static QString QClassToHtmlClass(const QString& name);
 		static QString ExtractFuncString(const QString& input);
+		static QString RemoveStrPrefix(const QString& key, const QString& eventName);
 	};
 }

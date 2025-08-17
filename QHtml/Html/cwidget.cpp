@@ -3,7 +3,6 @@
 	2025.8.5
 */
 #include "cwidget.h"
-#include "linkbridge.h"
 namespace ysp::qt::html {
 	JsParser CWidget::jsParser;
 	QMap<QWidget*, StyleBuilder> CWidget::styleBuilder;
@@ -45,12 +44,12 @@ namespace ysp::qt::html {
 		if (button == Qt::LeftButton) {
 			isPressedLeft = true;
 		}
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mousedown"), event, global);
+		TriggerJsEvent<QMouseEvent>("mousedown", event);
 		QWidget::mousePressEvent(event);
 	}
 
 	void CWidget::mouseMoveEvent(QMouseEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mousemove"), event, global);
+		TriggerJsEvent<QMouseEvent>("mousemove", event);
 		QWidget::mouseMoveEvent(event);
 	}
 
@@ -58,9 +57,9 @@ namespace ysp::qt::html {
 		auto button = event->button();
 		if (button == Qt::LeftButton) {
 			isPressedLeft = false;
-			jsParser.Trigger(TriggerId("click"));
+			TriggerJsEvent("click");
 		}
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("mouseup"), event, global);
+		TriggerJsEvent<QMouseEvent>("mouseup", event);
 		QWidget::mouseReleaseEvent(event);
 	}
 
@@ -73,28 +72,43 @@ namespace ysp::qt::html {
 	}
 
 	void CWidget::resizeEvent(QResizeEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("resize"), event,global);
+		TriggerJsEvent<QResizeEvent>("resize", event);
 		QWidget::resizeEvent(event);
 	}
 
 	void CWidget::wheelEvent(QWheelEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("wheel"), event, global);
+		TriggerJsEvent<QWheelEvent>("wheel", event);
 		QWidget::wheelEvent(event);
 	}
 
 	void CWidget::keyPressEvent(QKeyEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("keydown"), event, global);
+		TriggerJsEvent<QKeyEvent>("keydown", event);
 		QWidget::keyPressEvent(event);
 	}
 
 	void CWidget::keyReleaseEvent(QKeyEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("keyup"), event, global);
+		TriggerJsEvent<QKeyEvent>("keyup", event);
 		QWidget::keyReleaseEvent(event);
 	}
 
 	void CWidget::closeEvent(QCloseEvent* event) {
-		LinkBridge::TriggerJsEvent(jsParser, TriggerId("close"), event, global);
+		TriggerJsEvent<QCloseEvent>("close", event);
 		QWidget::closeEvent(event);
+	}
+
+	void CWidget::enterEvent(QEnterEvent* event) {
+		TriggerJsEvent<QEnterEvent>("mouseenter", event);
+		QWidget::enterEvent(event);
+	}
+
+	void CWidget::leaveEvent(QEvent* event) {
+		TriggerJsEvent<QEvent>("mouseleave", event);
+		QWidget::leaveEvent(event);
+	}
+
+	void CWidget::mouseDoubleClickEvent(QMouseEvent* event) {
+		TriggerJsEvent("dblclick");
+		QWidget::mouseDoubleClickEvent(event);
 	}
 
 	QString CWidget::TriggerId(const QString& key) {
@@ -105,5 +119,8 @@ namespace ysp::qt::html {
 		if (consoleWindow.load() == nullptr) {
 			consoleWindow.store(new ConsoleWindow(), std::memory_order_release);
 		}
+	}
+	void CWidget::TriggerJsEvent(const QString& key) {
+		LinkBridge::TriggerJsEvent(jsParser, GetKeyString(this), TriggerId(key), global);
 	}
 }

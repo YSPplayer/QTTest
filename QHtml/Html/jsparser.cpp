@@ -83,6 +83,11 @@ namespace ysp::qt::html {
 			duk_push_string(ctx, str.c_str());
 			break;
 		}
+		case JS_TYPE_OBJECT: {
+			const std::string& str = *(std::string*)v;
+			duk_get_global_string(ctx, str.c_str());
+			break;
+		}
 		case JS_TYPE_INT: { // int
 			duk_push_int(ctx, *(int*)v);
 			break;
@@ -541,6 +546,7 @@ namespace ysp::qt::html {
 		switch (type) {
 		case JS_TYPE_CLASS: delete static_cast<JsClass*>(value); break;
 		case JS_TYPE_ARRAY: delete static_cast<JsArray*>(value); break;
+		case JS_TYPE_OBJECT: delete static_cast<std::string*>(value); break;
 		case JS_TYPE_STRING: delete static_cast<std::string*>(value); break;
 		case JS_TYPE_INT: delete static_cast<int*>(value); break;
 		case JS_TYPE_DOUBLE: delete static_cast<double*>(value); break;
@@ -564,6 +570,10 @@ namespace ysp::qt::html {
 
 	std::shared_ptr<JsValue> JsValue::CreateValue(std::string value) {
 		return std::make_shared<JsValue>(new std::string(value), JS_TYPE_STRING);
+	}
+
+	std::shared_ptr<JsValue> JsValue::CreateObjectValue(std::string value) {
+		return std::make_shared<JsValue>(new std::string(value), JS_TYPE_OBJECT);
 	}
 
 	std::shared_ptr<JsValue> JsValue::CreateValue(JsClass* value) {
