@@ -9,6 +9,7 @@
 #include <QList>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QWidget>
 namespace ysp::qt::html {
     // CSS属性结构
     struct CSSProperty {
@@ -27,6 +28,9 @@ namespace ysp::qt::html {
         QMap<QString, CSSProperty> properties;     // 属性映射
         CSSRule() {}
         CSSRule(const QString& sel) : selector(sel) {}
+        bool CheckRule(QWidget* widget);
+        QString GetSelectorHander();
+        QString GetPropertiesStyle();
     };
 
     // CSS解析器类

@@ -364,7 +364,7 @@ namespace ysp::qt::html {
 		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
 		duk_pop(ctx);
 		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [id](QWidget* widget)->bool {
-			return CWidget::GetId(widget) == id;
+			return CWidget::GetJsId(widget) == id;
 		});
 		if (widegts.count() > 0 && widegts[0]) {
 			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
@@ -448,17 +448,20 @@ namespace ysp::qt::html {
 		duk_require_object(ctx, 0);
 		if (duk_get_prop_string(ctx, -1, K_PTRKEY)) {
 			child = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
-			duk_pop_2(ctx);
+			duk_pop(ctx);
 			if (child) {
 				for (QWidget* widget : w->findChildren<QWidget*>()) {
 					if (widget == child) {
+						duk_del_prop_string(ctx, -1, K_PTRKEY);  // 删除当前JS绑定的指针属性
 						ptr->objects.removeOne(child);//数组也要移除
+						CWidget::styleBuilder.remove(w);//样式移除
 						child->setParent(nullptr);
 						child->deleteLater();
 						break;
 					}
 				}
 			}
+			duk_pop(ctx);
 		}
 		else {
 			return ThrowError(ctx, DUK_RET_TYPE_ERROR,

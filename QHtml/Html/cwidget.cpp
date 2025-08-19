@@ -29,6 +29,11 @@ namespace ysp::qt::html {
 		return widget->objectName();
 	}
 
+	QString CWidget::GetJsId(QWidget* widget) {
+		return  widget->property("jsid").isValid() ?
+			widget->property("jsid").toString() : "";
+	}
+
 	QString CWidget::GetClass(QWidget* widget) {
 		return  widget->property("class").isValid() ?
 			widget->property("class").toString() : "";

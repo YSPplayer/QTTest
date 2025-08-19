@@ -6,35 +6,28 @@
 namespace ysp::qt::html {
 	StyleBuilder::StyleBuilder(QWidget* widget) {
 		const QString& id = widget->objectName();
-		const QString& classValue = widget->property("class").isValid() ?
-			widget->property("class").toString() : "";
 		format = widget->metaObject()->className();
-		if (id != "") {
-			format += ("#" + id);
-		}
-		if (classValue != "") {
+		//ID作为最终标识符，这是QT的唯一id标识符 非js的id
+		format += "#" + id;
+		/*if (classValue != "") {
 			format += ("." + classValue);
-		}
+		}*/
 	}
 	StyleBuilder::StyleBuilder() {
 		format = "";
 	}
 	StyleBuilder& StyleBuilder::SetBorderRadius(qint32 radius) {
-		styles.append(QString("border-radius: %1px;").arg(radius));
-		return *this;
+		return SetStyle("border-radius", QString("%1px").arg(radius));
 	}
 	StyleBuilder& StyleBuilder::SetBorderRadius(qint32 r1, qint32 r2, qint32 r3, qint32 r4) {
-		styles.append(QString("border-radius: %1px %2px %3px %4px;").arg(r1).arg(r2).arg(r3)
+		return SetStyle("border-radius",QString("%1px %2px %3px %4px").arg(r1).arg(r2).arg(r3)
 			.arg(r4));
-		return *this;
 	}
 	StyleBuilder& StyleBuilder::SetBackgroundColor(const QColor& color) {
-		styles.append(QString("background-color: %1;").arg(color.name()));
-		return *this;
+		return SetStyle("background-color", color.name());
 	}
 	StyleBuilder& StyleBuilder::SetBackgroundColor(const QString& name) {
-		styles.append(QString("background-color: %1;").arg(name));
-		return *this;
+		return SetStyle("background-color", name);
 	}
 	StyleBuilder& StyleBuilder::SetStyle(const QString& prop, const QString& value) {
 		const QString p = prop.trimmed().toLower();
@@ -79,6 +72,9 @@ namespace ysp::qt::html {
 		return Build();
 	}
 	QString StyleBuilder::Build() {
+#ifdef _DEBUG
+		qDebug() << QString("%1 { %2 }").arg(format).arg(styles.join(" "));
+#endif // _DEBUG
 		return QString("%1 { %2 }").arg(format).arg(styles.join(" "));
 	}
 }

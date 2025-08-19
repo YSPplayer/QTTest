@@ -12,6 +12,7 @@ namespace ysp::qt::html {
 #endif // _DEBUG
 		CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 	}
+	QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"}};
 	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QResizeEvent* event, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
@@ -72,5 +73,18 @@ namespace ysp::qt::html {
 		JsClass* obj = new JsClass;
 		(*obj)["target"] = JsValue::CreateObjectValue(target.toStdString());
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
+	}
+	QString LinkBridge::QClassToHtmlClass(const QString& name) {
+		return classmap.contains(name) ? classmap[name] : "";
+	}
+	qint32 LinkBridge::FindSubstringEndIndex(const QString& mainStr, const QString& subStr) {
+		if (subStr.isEmpty() || mainStr.isEmpty()) {
+			return -1;
+		}
+		qint32 index = mainStr.indexOf(subStr);
+		if (index == -1) {
+			return -1;  // 子串不存在
+		}
+		return index + subStr.length() - 1;  // 返回结束索引
 	}
 }

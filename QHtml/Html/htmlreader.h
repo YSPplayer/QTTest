@@ -35,8 +35,9 @@ namespace ysp::qt::html {
 		static void ParseKey(const QString& key,QWidget* widget, StyleBuilder&builder,QMap<QString, QString>& attributes);
 		static bool ContainsKey(QMap<QString, QString>& map,const QString& key);
 		static QList<QString> Split(const QString& key,const QString& split);
-		static QString QClassToHtmlClass(const QString& name);
 		static QString ExtractFuncString(const QString& input);
 		static QString RemoveStrPrefix(const QString& key, const QString& eventName);
+		static QString ToNumberString(const QString& key);
+		static bool ContainsId(const QString& id);
 	};
 }

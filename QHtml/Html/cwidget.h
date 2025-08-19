@@ -25,6 +25,7 @@ namespace ysp::qt::html {
 		static void ShowConsoleWindow(bool show);
 		static void AppendConsoleWindowMsg(const QString& text);
 		static QString GetId(QWidget* widget);
+		static QString GetJsId(QWidget* widget);
 		static QString GetClass(QWidget* widget);
 		static QString GetClassName(QWidget* widget);
 		static QString GetKeyString(QWidget* widget);

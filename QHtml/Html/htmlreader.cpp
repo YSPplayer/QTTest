@@ -9,13 +9,28 @@
 namespace ysp::qt::html {
 #define HTML_ADD_EVENT  R"(
 			window.addEventListener('load', function() {
-			  var div = document.getElementByKey('%1');
+			  const div = document.getElementByKey('%1');
 			  if(div !== null) {
 				div.addEventListener('%2',%3);
 				}
 			});
 			)"
-
+#define HTML_ADD_EVENT_HOVER R"(
+			window.addEventListener('load', function() {
+			  const div = document.getElementByKey('%1');
+			  if(div !== null) {
+				const oldstyle = div.style;
+				div.addEventListener('mouseenter',function(e) {
+						e.target.style = '%2'; 
+					});
+				div.addEventListener('mouseleave',(function(style,olddiv){
+					return function() {
+						olddiv.style = style;
+					}
+				})(oldstyle,div));
+				}
+			});
+			)"
 	HtmlReader::HtmlReader(const QString& filePath) {
 		QFile file(filePath);
 		if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -48,9 +63,6 @@ namespace ysp::qt::html {
 			}
 		}
 		CWidget* widget = ElementsToQWidegt(elements,cssrules,*jsParser);
-		//widget->callback.Subscribe(CallBackType::Load, [widget](void**) {/*nullptr*/
-		//	widget->TriggerGlobalEvent("load");
-		//});
 		return widget;
 	}
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements,JsParser& jsparser) {
@@ -136,24 +148,34 @@ namespace ysp::qt::html {
 		QMap<QString, QString>& attributes = element->attributes;
 		QString id = "";
 		QString classname = "";
-		QString classtype = QClassToHtmlClass(widget->metaObject()->className());
+		//QString classtype = LinkBridge::QClassToHtmlClass(widget->metaObject()->className());
 		if (attributes.contains("id")) { //优先提取id
-			id = attributes["id"];
-			widget->setObjectName(id);
+			if (attributes["id"] != "" && !ContainsId(attributes["id"])) { //确保id唯一
+				id = attributes["id"];
+				widget->setProperty("jsid", id);
+			}
 		}
 		if (attributes.contains("class")) { //优先提取class
 			classname = attributes["class"];
 			widget->setProperty("class", classname);
 		}
+		//每一个对象都会有一个独立的id(qt的id 非js id)
+		widget->setObjectName(CWidget::GetKeyString(widget));
 		//增加样式部分
-		QString stylename = QString("%1%2").arg(classname != "" ? "." + classname
-			: "").arg(id != "" ? "#" + id : "");
-		if (stylename != "") {
-			const QList<CSSRule*>& filterrules = ListFilter::Where<CSSRule*>(rules, [stylename](CSSRule* css)->bool {
-				return css->selector.contains(stylename);
-				});
-			if (filterrules.size() > 0) {
-				QMap<QString, CSSProperty>& filterattributes = filterrules[0]->properties;
+		/*QString stylename = QString("%1%2").arg(classname != "" ? "." + classname
+			: "").arg(id != "" ? "#" + id : "");*/
+		const QList<CSSRule*>& filterrules = ListFilter::Where<CSSRule*>(rules, [=](CSSRule* css)->bool {
+			return css->CheckRule(widget);
+			});
+		for (CSSRule* filterrule : filterrules) {
+			const QString& selecthander = filterrule->GetSelectorHander();
+			if (selecthander == "hover") {
+				const QString& jsscript = QString(HTML_ADD_EVENT_HOVER).arg(CWidget::GetKeyString(widget).toUtf8().constData())
+					.arg(filterrule->GetPropertiesStyle());
+				CWidget::jsParser.RunJs(jsscript.toUtf8().constData());
+			}
+			else {
+				QMap<QString, CSSProperty>& filterattributes = filterrule->properties;
 				for (const auto& key : filterattributes.keys()) {
 					attributes[filterattributes[key].name] = filterattributes[key].value;
 				}
@@ -171,6 +193,7 @@ namespace ysp::qt::html {
 		}
 		//解析非style值的标签
 		for (const QString& key : attributes.keys()) {
+			if (key == "style") continue;
 			ParseKey(key,widget, builder,attributes);
 		}
 		widget->setStyleSheet(builder.ToString());
@@ -204,28 +227,28 @@ namespace ysp::qt::html {
 		const QString lkey = key;
 		QString value = attributes[key].trimmed();
 		if (lkey == "width") {
-			widget->resize(value.toInt(), widget->height());
+			widget->resize(ToNumberString(value).toInt(), widget->height());
 		}
 		else if (lkey == "height") {
-			widget->resize(widget->width(), value.toInt());
+			widget->resize(widget->width(), ToNumberString(value).toInt());
 		}
 		else if (lkey == "top") {
-			widget->move(widget->x(), value.toInt());
+			widget->move(widget->x(), ToNumberString(value).toInt());
 		}
 		else if (lkey == "left") {
-			widget->move(value.toInt(), widget->y());
+			widget->move(ToNumberString(value).toInt(), widget->y());
 		}
 		else if (lkey == "bottom" && parent) {
 			if (attributes.contains("height")) {
-				widget->resize(widget->width(), attributes["height"].toInt());
+				widget->resize(widget->width(), ToNumberString(attributes["height"]).toInt());
 			}
-			widget->move(widget->x(), parent->height() - value.toInt() - widget->height());
+			widget->move(widget->x(), parent->height() - ToNumberString(value).toInt() - widget->height());
 		}
 		else if (lkey == "right" && parent) {
 			if (attributes.contains("width")) {
-				widget->resize(attributes["width"].toInt(), widget->height());
+				widget->resize(ToNumberString(attributes["width"]).toInt(), widget->height());
 			}
-			widget->move(parent->width() - value.toInt() - widget->width(), widget->y());
+			widget->move(parent->width() - ToNumberString(value).toInt() - widget->width(), widget->y());
 		}
 		else if (lkey == "background-color") {
 			builder.SetBackgroundColor(value);
@@ -233,11 +256,12 @@ namespace ysp::qt::html {
 		else if (lkey == "border-radius") {
 			const QList<QString>& results = Split(value, " ");
 			if (results.count() == 4) {
-				builder.SetBorderRadius(results[0].toInt(),
-					results[1].toInt(), results[2].toInt(), results[3].toInt());
+				builder.SetBorderRadius(ToNumberString(results[0]).toInt(),
+					ToNumberString(results[1]).toInt(), ToNumberString(results[2]).toInt(),
+					ToNumberString(results[3]).toInt());
 			}
 			else {
-				builder.SetBorderRadius(value.toInt());
+				builder.SetBorderRadius(ToNumberString(value).toInt());
 			}
 		}
 		else if (lkey == "onclick" || lkey == "onmousemove" ||
@@ -245,7 +269,7 @@ namespace ysp::qt::html {
 			|| lkey == "onmouseleave" || lkey == "ondblclick") { //增加触发事件
 			const QString& eventstr = RemoveStrPrefix("on", lkey);
 			const QString& func = ExtractFuncString(value);
-			QString jsscript = QString(HTML_ADD_EVENT).arg(CWidget::GetKeyString(widget).toUtf8().constData()).arg(eventstr).arg(func);
+			const QString& jsscript = QString(HTML_ADD_EVENT).arg(CWidget::GetKeyString(widget).toUtf8().constData()).arg(eventstr).arg(func);
 			CWidget::jsParser.RunJs(jsscript.toUtf8().constData());
 		}
 	}
@@ -270,10 +294,6 @@ namespace ysp::qt::html {
 		return resultList;
 	}
 
-	QString HtmlReader::QClassToHtmlClass(const QString& name) {
-		if (name == "QWidegt") return "div";
-		return "";
-	}
 
 	QString HtmlReader::ExtractFuncString(const QString& input) {
 		qint32 pos = input.indexOf('(');
@@ -285,6 +305,26 @@ namespace ysp::qt::html {
 			return eventName.mid(2);
 		}
 		return eventName;
+	}
+
+	QString HtmlReader::ToNumberString(const QString& key) {
+		qint32 i = 0;
+		bool hasDot = false;
+		while (i < key.length() && (key[i].isDigit() || (!hasDot && key[i] == '.'))) {
+			if (key[i] == '.') hasDot = true;
+			i++;
+		}
+		return key.left(i);
+	}
+
+	bool HtmlReader::ContainsId(const QString& id) {
+		for (QWidget* widget : CWidget::styleBuilder.keys()) {
+			if (!widget) continue;
+			const QString& jsid = widget->property("jsid").isValid() ?
+				widget->property("jsid").toString() : "";
+			if (jsid == id) return true;
+		}
+		return false;
 	}
 
 	CWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements, const QList<CSSRule*>& rules, JsParser& jsparser) {

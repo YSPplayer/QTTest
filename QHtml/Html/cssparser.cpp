@@ -3,6 +3,7 @@
     2025.8.2
 */
 #include "cssparser.h"
+#include "linkbridge.h"
 namespace ysp::qt::html {
 
     CSSParser::CSSParser(QObject* parent)
@@ -252,5 +253,59 @@ namespace ysp::qt::html {
             }
         }
         qDebug() << "=== End Debug Output ===";
+    }
+
+    bool CSSRule::CheckRule(QWidget* widget) {
+        const QString& id = widget->property("jsid").isValid() ?
+            widget->property("jsid").toString() : "";
+        const QString& classValue = widget->property("class").isValid() ?
+            widget->property("class").toString() : "";
+        const QString& classType = LinkBridge::QClassToHtmlClass(widget->metaObject()->className());
+        const QList<QString>& selectors = selector.split(":");
+        if (selectors.count() > 0) {
+            const QString& key = selectors[0];
+            qint32 index = 0;
+            QString mid = "";
+            QList<QString> filter = {"#",".",":", ""};
+            if (id != "") {
+                index = LinkBridge::FindSubstringEndIndex(key,"#" + id);
+                if (index != -1) {
+                    mid = index >= key.length() - 1 ? "" : key.mid(index, 1);
+                    if (filter.contains(mid)) return true;
+                }
+            }
+            if (classValue != "") {
+                index = LinkBridge::FindSubstringEndIndex(key, "." + classValue);
+                if (index != -1) {
+                    mid = index >= key.length() - 1 ? "" : key.mid(index, 1);
+                    if (filter.contains(mid)) return true;
+                }
+            }
+            if (classType != "") {
+                index = LinkBridge::FindSubstringEndIndex(key, classType);
+                if (index != -1) {
+                    mid = index >= key.length() - 1 ? "" : key.mid(index, 1);
+                    if (filter.contains(mid)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 返回选择器:后面的部分
+    /// </summary>
+    /// <returns></returns>
+    QString CSSRule::GetSelectorHander() {
+        const QStringList& parts = selector.split(":", Qt::SkipEmptyParts);
+        return parts.size() >= 2 ? parts[1] : "";
+    }
+    QString CSSRule::GetPropertiesStyle() {
+        QString result = "";
+        for (const QString& key : properties.keys()) {
+            auto& value = properties[key];
+            result += QString("%1:%2").arg(value.name).arg(value.value);
+        }
+        return result;
     }
 }

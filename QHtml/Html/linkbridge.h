@@ -10,10 +10,12 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 #include <QMouseEvent>
+#include <QMap>
 #include "jsparser.h"
 namespace ysp::qt::html {
 	class LinkBridge {
 	public:
+		static QMap<QString, QString> classmap;
 		static void Print(const char* str);
 		static void TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QResizeEvent* event, bool global = false);
 		static void TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QWheelEvent* event, bool global = false);
@@ -23,5 +25,7 @@ namespace ysp::qt::html {
 		static void TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QEnterEvent* event, bool global = false);
 		static void TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QEvent* event, bool global = false);
 		static void TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, bool global = false);
+		static QString QClassToHtmlClass(const QString& name);
+		qint32 static FindSubstringEndIndex(const QString& mainStr, const QString& subStr);
 	};
 }
