@@ -16,8 +16,6 @@ namespace ysp::qt::html {
 	class CWidget: public QWidget {
 	//	Q_OBJECT 加了之后用不了自定义样式
 	public:
-		static JsParser jsParser;
-		static QMap<QWidget*,StyleBuilder> styleBuilder;
 		CallBack callback;
 		CWidget(bool global = false,QWidget* parent = nullptr);
 		~CWidget() {};
@@ -51,7 +49,7 @@ namespace ysp::qt::html {
 		static std::atomic<ConsoleWindow*> consoleWindow;
 		template<typename T>
 		void TriggerJsEvent(const QString& key, T* event) {
-			LinkBridge::TriggerJsEvent(jsParser, GetKeyString(this), TriggerId(key), event, global);
+			LinkBridge::TriggerJsEvent(GetKeyString(this), TriggerId(key), event, global);
 		};
 		void TriggerJsEvent(const QString& key);
 	};

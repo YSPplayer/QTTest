@@ -3,9 +3,37 @@
 	2025.8.3
 */
 #include <QDebug>
+#include "listfilter.h"
 #include "linkbridge.h"
 #include "cwidget.h"
 namespace ysp::qt::html {
+#define HTML_ADD_EVENT  R"(
+			window.addEventListener('load', function() {
+			  const div = document.getElementByKey('%1');
+			  if(div !== null) {
+				div.addEventListener('%2',%3);
+				}
+			});
+			)"
+#define HTML_ADD_EVENT_HOVER R"(
+			window.addEventListener('load', function() {
+			  const div = document.getElementByKey('%1');
+			  if(div !== null) {
+				const oldstyle = div.style;
+				div.addEventListener('mouseenter',function(e) {
+						e.target.style = '%2'; 
+					});
+				div.addEventListener('mouseleave',(function(style,olddiv){
+					return function() {
+						olddiv.style = style;
+					}
+				})(oldstyle,div));
+				}
+			});
+			)"
+	JsParser LinkBridge::jsParser;
+	QMap<QWidget*, StyleBuilder> LinkBridge::styleBuilder;
+	QList<CSSRule*> LinkBridge::cssrules;
 	void LinkBridge::Print(const char* str) {
 #ifdef _DEBUG
 		qDebug() << str;
@@ -13,7 +41,7 @@ namespace ysp::qt::html {
 		CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 	}
 	QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"}};
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QResizeEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
 		(*obj)["oldOffsetHeight"] = JsValue::CreateValue(event->oldSize().height());
@@ -22,7 +50,7 @@ namespace ysp::qt::html {
 		(*obj)["target"] = JsValue::CreateObjectValue(target.toStdString());
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QWheelEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QWheelEvent* event, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["deltaX"] = JsValue::CreateValue(event->angleDelta().x());
 		(*obj)["deltaY"] = JsValue::CreateValue(event->angleDelta().y());
@@ -32,7 +60,7 @@ namespace ysp::qt::html {
 		(*obj)["shiftKey"] = JsValue::CreateValue(bool(event->modifiers() & Qt::ShiftModifier));
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QKeyEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QKeyEvent* event, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["key"] = JsValue::CreateValue(QKeySequence(event->key()).toString().toLower().toStdString());
 		(*obj)["code"] = JsValue::CreateValue(QString("Key" + QKeySequence(event->key()).toString().toLower()).toStdString());
@@ -40,10 +68,10 @@ namespace ysp::qt::html {
 		(*obj)["shiftKey"] = JsValue::CreateValue(bool(event->modifiers() & Qt::ShiftModifier));
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QCloseEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QCloseEvent* event, bool global) {
 		jsParser.Trigger(key, global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QMouseEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QMouseEvent* event, bool global) {
 		auto button = event->button();
 		JsClass* obj = new JsClass;
 		(*obj)["button"] = JsValue::CreateValue(button == Qt::LeftButton ? 0 : button == Qt::MiddleButton ?
@@ -59,20 +87,181 @@ namespace ysp::qt::html {
 		(*obj)["target"] = JsValue::CreateObjectValue(target.toStdString());
 		jsParser.Trigger(key, JsValue::CreateValue(obj),global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QEnterEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QEnterEvent* event, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["clientX"] = JsValue::CreateValue(event->position().x());
 		(*obj)["clientY"] = JsValue::CreateValue(event->position().y());
 		(*obj)["target"] = JsValue::CreateObjectValue(target.toStdString());
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, QEvent* event, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QEvent* event, bool global) {
 		jsParser.Trigger(key, global);
 	}
-	void LinkBridge::TriggerJsEvent(JsParser& jsParser, const QString& target, const QString& key, bool global) {
+	void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, bool global) {
 		JsClass* obj = new JsClass;
 		(*obj)["target"] = JsValue::CreateObjectValue(target.toStdString());
 		jsParser.Trigger(key, JsValue::CreateValue(obj), global);
+	}
+	void LinkBridge::TriggerJsEvent(const QString& key, bool global) {
+		jsParser.Trigger(key, global);
+	}
+	bool LinkBridge::ContainsId(const QString& id) {
+		for (QWidget* widget : LinkBridge::styleBuilder.keys()) {
+			if (!widget) continue;
+			const QString& jsid = widget->property("jsid").isValid() ?
+				widget->property("jsid").toString() : "";
+			if (jsid == id) return true;
+		}
+		return false;
+	}
+	void LinkBridge::ParseAttributes(ElementData* element, QWidget* widget) {
+		widget->setAutoFillBackground(true);
+		widget->setGeometry(0, 0, 0, 0);
+		QMap<QString, QString>& attributes = element->attributes;
+		QString id = "";
+		QString classname = "";
+		if (attributes.contains("id")) { //优先提取id
+			if (attributes["id"] != "" && !ContainsId(attributes["id"])) { //确保id唯一
+				id = attributes["id"];
+				widget->setProperty("jsid", id);
+			}
+		}
+		if (attributes.contains("class")) { //优先提取class
+			classname = attributes["class"];
+			widget->setProperty("class", classname);
+		}
+		//每一个对象都会有一个独立的id(qt的id 非js id)
+		widget->setObjectName(CWidget::GetKeyString(widget));
+		//增加样式部分
+		const QList<CSSRule*>& filterrules = ListFilter::Where<CSSRule*>(cssrules, [=](CSSRule* css)->bool {
+			return css->CheckRule(widget);
+			});
+		for (CSSRule* filterrule : filterrules) {
+			const QString& selecthander = filterrule->GetSelectorHander();
+			if (selecthander == "hover") {
+				const QString& jsscript = QString(HTML_ADD_EVENT_HOVER).arg(CWidget::GetKeyString(widget).toUtf8().constData())
+					.arg(filterrule->GetPropertiesStyle());
+				LinkBridge::jsParser.RunJs(jsscript.toUtf8().constData());
+			}
+			else {
+				QMap<QString, CSSProperty>& filterattributes = filterrule->properties;
+				for (const auto& key : filterattributes.keys()) {
+					attributes[filterattributes[key].name] = filterattributes[key].value;
+				}
+			}
+		}
+		LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
+		auto& builder = LinkBridge::styleBuilder[widget];
+		//优先判断是否有style修饰，优先解析style中的值
+		if (attributes.contains("style")) {
+			QMap<QString, QString> styleattributes;
+			ParseStyleString(attributes["style"], styleattributes);
+			for (const QString& key : styleattributes.keys()) {
+				ParseKey(key, widget, builder, styleattributes);
+			}
+		}
+		//解析非style值的标签
+		for (const QString& key : attributes.keys()) {
+			if (key == "style") continue;
+			ParseKey(key, widget, builder, attributes);
+		}
+		widget->setStyleSheet(builder.ToString());
+	}
+	void LinkBridge::ParseStyleString(const QString& styleValue, QMap<QString, QString>& map) {
+		if (styleValue.isEmpty()) return;
+		QString value = styleValue.trimmed();
+		QStringList pairs = value.split(';', Qt::SkipEmptyParts);
+		for (const QString& pair : pairs) {
+			const QString& trimmedPair = pair.trimmed();
+			if (trimmedPair.isEmpty()) continue;
+			qint32 colonIndex = trimmedPair.indexOf(':');
+			if (colonIndex > 0) {
+				const QString& key = trimmedPair.left(colonIndex).trimmed().toLower();
+				const QString& value = trimmedPair.mid(colonIndex + 1).trimmed();
+				if (!key.isEmpty()) {
+					map[key] = value;
+				}
+			}
+		}
+	}
+	void LinkBridge::ParseKey(const QString& key, QWidget* widget, StyleBuilder& builder, QMap<QString, QString>& attributes) {
+		QWidget* parent = widget->parentWidget() ? widget->parentWidget() : nullptr;
+		const QString lkey = key;
+		QString value = attributes[key].trimmed();
+		if (lkey == "width") {
+			widget->resize(ToNumberString(value).toInt(), widget->height());
+		}
+		else if (lkey == "height") {
+			widget->resize(widget->width(), ToNumberString(value).toInt());
+		}
+		else if (lkey == "top") {
+			widget->move(widget->x(), ToNumberString(value).toInt());
+		}
+		else if (lkey == "left") {
+			widget->move(ToNumberString(value).toInt(), widget->y());
+		}
+		else if (lkey == "bottom" && parent) {
+			if (attributes.contains("height")) {
+				widget->resize(widget->width(), ToNumberString(attributes["height"]).toInt());
+			}
+			widget->move(widget->x(), parent->height() - ToNumberString(value).toInt() - widget->height());
+		}
+		else if (lkey == "right" && parent) {
+			if (attributes.contains("width")) {
+				widget->resize(ToNumberString(attributes["width"]).toInt(), widget->height());
+			}
+			widget->move(parent->width() - ToNumberString(value).toInt() - widget->width(), widget->y());
+		}
+		else if (lkey == "background-color") {
+			builder.SetBackgroundColor(value);
+		}
+		else if (lkey == "border-radius") {
+			const QList<QString>& results = Split(value, " ");
+			if (results.count() == 4) {
+				builder.SetBorderRadius(ToNumberString(results[0]).toInt(),
+					ToNumberString(results[1]).toInt(), ToNumberString(results[2]).toInt(),
+					ToNumberString(results[3]).toInt());
+			}
+			else {
+				builder.SetBorderRadius(ToNumberString(value).toInt());
+			}
+		}
+		else if (lkey == "onclick" || lkey == "onmousemove" ||
+			lkey == "onmouseup" || lkey == "onmousedown" || lkey == "onmouseenter"
+			|| lkey == "onmouseleave" || lkey == "ondblclick") { //增加触发事件
+			const QString& eventstr = RemoveStrPrefix("on", lkey);
+			const QString& func = ExtractFuncString(value);
+			const QString& jsscript = QString(HTML_ADD_EVENT).arg(CWidget::GetKeyString(widget).toUtf8().constData()).arg(eventstr).arg(func);
+			LinkBridge::jsParser.RunJs(jsscript.toUtf8().constData());
+		}
+	}
+	QString LinkBridge::ToNumberString(const QString& key) {
+		qint32 i = 0;
+		bool hasDot = false;
+		while (i < key.length() && (key[i].isDigit() || (!hasDot && key[i] == '.'))) {
+			if (key[i] == '.') hasDot = true;
+			i++;
+		}
+		return key.left(i);
+	}
+
+	QList<QString> LinkBridge::Split(const QString& key, const QString& split) {
+		QList<QString> resultList;
+		QStringList tempList = key.split(split, Qt::SkipEmptyParts);
+		for (const QString& item : tempList) {
+			resultList.append(item);
+		}
+		return resultList;
+	}
+	QString LinkBridge::RemoveStrPrefix(const QString& key, const QString& eventName) {
+		if (eventName.startsWith(key, Qt::CaseInsensitive)) {
+			return eventName.mid(2);
+		}
+		return eventName;
+	}
+	QString LinkBridge::ExtractFuncString(const QString& input) {
+		qint32 pos = input.indexOf('(');
+		return (pos != -1) ? input.left(pos) : input;
 	}
 	QString LinkBridge::QClassToHtmlClass(const QString& name) {
 		return classmap.contains(name) ? classmap[name] : "";
@@ -83,8 +272,8 @@ namespace ysp::qt::html {
 		}
 		qint32 index = mainStr.indexOf(subStr);
 		if (index == -1) {
-			return -1;  // �Ӵ�������
+			return -1;  // 子串不存在
 		}
-		return index + subStr.length() - 1;  // ���ؽ�������
+		return index + subStr.length() - 1;  // 返回结束索引
 	}
 }

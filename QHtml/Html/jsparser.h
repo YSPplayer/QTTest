@@ -75,6 +75,7 @@ namespace ysp::qt::html {
 		void Trigger(const QString& callbackType, bool global = false);
 		void CreateDocument(QWidget* widget);
 	private:
+		bool init;
 		QList<QWidget*> objects;
 		duk_context* ctx;
 		JSBinder* binder;
@@ -87,6 +88,7 @@ namespace ysp::qt::html {
 		static QWidget* ThisWidget(duk_context* ctx);
 		static duk_ret_t GetValue(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
+		JS_API static duk_ret_t Delete(duk_context* ctx);
 		JS_API static duk_ret_t ConsoleLog(duk_context* ctx);
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);

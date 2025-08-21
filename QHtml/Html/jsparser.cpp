@@ -14,14 +14,17 @@ namespace ysp::qt::html {
 	JsParser::JsParser() {
 		ctx = nullptr;
 		binder = nullptr;
+		init = false;
 	}
 	bool JsParser::Init() {
+		if (init) return true;
 		ctx = duk_create_heap_default();
 		bool success = ctx != nullptr;
 		if (success) {
 			binder = new JSBinder(ctx);
 			BindJsFunc();
 		}
+		init = success;
 		return success;
 	}
 	JsParser::~JsParser() {
@@ -194,6 +197,7 @@ namespace ysp::qt::html {
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
 		binder->bindMethod("append", Append, 1);
 		binder->bindMethod("remove", Remove, 1);
+		binder->bindMethod("delete", Delete, 0);
 		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
 	}
 
@@ -227,8 +231,8 @@ namespace ysp::qt::html {
 				parent ? duk_push_int(ctx, parent->width() - w->x() - w->width()) : duk_push_int(ctx, -1);
 			}
 			else if (key == "style") {
-				duk_push_string(ctx, CWidget::styleBuilder.contains(w) ?
-					CWidget::styleBuilder[w].GetStyles().toUtf8().constData() : "");
+				duk_push_string(ctx, LinkBridge::styleBuilder.contains(w) ?
+					LinkBridge::styleBuilder[w].GetStyles().toUtf8().constData() : "");
 			}
 			else if (key == "visible") {
 				duk_push_boolean(ctx, w->isVisible());
@@ -285,10 +289,10 @@ namespace ysp::qt::html {
 		else if (key == "style") {
 			if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 				"parameter is not string.");
-			if (CWidget::styleBuilder.contains(w)) {
+			if (LinkBridge::styleBuilder.contains(w)) {
 				const char* v = duk_require_string(ctx, 0);
-				CWidget::styleBuilder[w].SetStyles(QString::fromUtf8(v));
-				w->setStyleSheet(CWidget::styleBuilder[w].ToString());
+				LinkBridge::styleBuilder[w].SetStyles(QString::fromUtf8(v));
+				w->setStyleSheet(LinkBridge::styleBuilder[w].ToString());
 			}
 		}
 		else if (key == "visible") {
@@ -298,6 +302,27 @@ namespace ysp::qt::html {
 			v ? w->show() : w->hide();
 		}
 		return 0;
+	}
+	JS_API duk_ret_t JsParser::Delete(duk_context* ctx) {
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* parser = static_cast<JsParser*>(duk_get_pointer(ctx, -1));
+		duk_pop(ctx);
+		duk_push_this(ctx);
+		if (!duk_get_prop_string(ctx, -1, K_PTRKEY)) { //不存在这个键 返回
+			duk_pop_2(ctx);
+			return 0;
+		}
+		QWidget* w = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+		duk_pop(ctx);
+		if (w) {
+			duk_del_prop_string(ctx, -1, K_PTRKEY);  // 删除当前JS绑定的指针属性
+			parser->objects.removeOne(w);//数组移除
+			LinkBridge::styleBuilder.remove(w);//样式移除
+			w->setParent(nullptr);
+			w->deleteLater();//对象删除
+		}
+		duk_pop(ctx);
+		return 0; 
 	}
 	JS_API duk_ret_t JsParser::ConsoleLog(duk_context* ctx) {
 		duk_push_string(ctx, " ");//往栈顶压入分隔符
@@ -452,11 +477,12 @@ namespace ysp::qt::html {
 			if (child) {
 				for (QWidget* widget : w->findChildren<QWidget*>()) {
 					if (widget == child) {
-						duk_del_prop_string(ctx, -1, K_PTRKEY);  // 删除当前JS绑定的指针属性
-						ptr->objects.removeOne(child);//数组也要移除
-						CWidget::styleBuilder.remove(w);//样式移除
+						//duk_del_prop_string(ctx, -1, K_PTRKEY);  // 删除当前JS绑定的指针属性
+						//ptr->objects.removeOne(child);//数组也要移除
+						//CWidget::styleBuilder.remove(w);//样式移除
 						child->setParent(nullptr);
-						child->deleteLater();
+						child->hide();
+						//child->deleteLater(); //仅仅移除元素，不释放内存
 						break;
 					}
 				}
@@ -477,7 +503,9 @@ namespace ysp::qt::html {
 		const QString& classname = QString::fromUtf8(duk_require_string(ctx, 0)).trimmed().toLower();
 		CWidget* widget = nullptr;
 		if (classname == "div") widget = new CWidget();
-		CWidget::styleBuilder[widget] = StyleBuilder(widget);
+		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
+		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
+		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);
 		duk_get_global_string(ctx, JSPARSER);
 		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
 		duk_pop(ctx);

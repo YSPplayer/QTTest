@@ -13,10 +13,10 @@ namespace ysp::qt::html {
 
     CSSParser::~CSSParser()
     {
-        for (qint32 i = 0; i < m_rules.count(); ++i) {
+     /*   for (qint32 i = 0; i < m_rules.count(); ++i) {
             delete m_rules[i];
             m_rules[i] = nullptr;
-        }
+        }*/
     }
 
     bool CSSParser::parseCSS(const QString& cssString)

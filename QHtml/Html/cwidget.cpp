@@ -4,8 +4,6 @@
 */
 #include "cwidget.h"
 namespace ysp::qt::html {
-	JsParser CWidget::jsParser;
-	QMap<QWidget*, StyleBuilder> CWidget::styleBuilder;
 	std::atomic<ConsoleWindow*> CWidget::consoleWindow(nullptr);
 	CWidget::CWidget(bool global,QWidget* parent):global(global),QWidget(parent){
 		isPressedLeft = false;
@@ -15,7 +13,7 @@ namespace ysp::qt::html {
 		setAttribute(Qt::WA_NoChildEventsForParent, true);
 	}
 	void CWidget::TriggerGlobalEvent(const QString& key) {
-		jsParser.Trigger(key, true);
+		LinkBridge::TriggerJsEvent(key, true);
 	}
 	void CWidget::ShowConsoleWindow(bool show) {
 		CheckConsoleWindow();
@@ -71,7 +69,7 @@ namespace ysp::qt::html {
 	void CWidget::showEvent(QShowEvent* event) {
 		if (!firstshow) {
 			firstshow = true;
-			if (global) jsParser.Trigger("load", true);
+			if (global) LinkBridge::TriggerJsEvent("load", true);
 		}
 		QWidget::showEvent(event);
 	}
@@ -126,6 +124,6 @@ namespace ysp::qt::html {
 		}
 	}
 	void CWidget::TriggerJsEvent(const QString& key) {
-		LinkBridge::TriggerJsEvent(jsParser, GetKeyString(this), TriggerId(key), global);
+		LinkBridge::TriggerJsEvent(GetKeyString(this), TriggerId(key), global);
 	}
 }
