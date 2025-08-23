@@ -70,7 +70,7 @@ namespace ysp::qt::html {
 		bool Init();
 		~JsParser();
 		bool RunJs(const char* script);
-		void Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params,bool global = false);
+		void Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params, bool global = false);
 		void Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param, bool global = false);
 		void Trigger(const QString& callbackType, bool global = false);
 		void CreateDocument(QWidget* widget);
@@ -79,12 +79,13 @@ namespace ysp::qt::html {
 		QList<QWidget*> objects;
 		duk_context* ctx;
 		JSBinder* binder;
+		void LoadJsLibrary();
 		void BindJsFunc();
 		void PushJsValue(const std::shared_ptr<JsValue>& value);
 		void PushJsObject(const JsClass* obj);
-		void PushJsArray(const JsArray* arr); 
+		void PushJsArray(const JsArray* arr);
 		//func//
-		static duk_ret_t ThrowError(duk_context* ctx,duk_ret_t code,const QString& error);
+		static duk_ret_t ThrowError(duk_context* ctx, duk_ret_t code, const QString& error);
 		static QWidget* ThisWidget(duk_context* ctx);
 		static duk_ret_t GetValue(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
@@ -97,6 +98,7 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t Append(duk_context* ctx);
 		JS_API static duk_ret_t Remove(duk_context* ctx);
 		JS_API static duk_ret_t CreateElement(duk_context* ctx);
+		JS_API static duk_ret_t SetStyleSheet(duk_context* ctx);
 		//func//
 	};
 }

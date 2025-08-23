@@ -42,13 +42,13 @@ namespace ysp::qt::html {
 		CWidget* widget = ElementsToQWidegt(elements);
 		return widget;
 	}
-	void HtmlReader::ParseChildElements(QXmlStreamReader& xml,QList<std::shared_ptr<ElementData>>& elements) {
-        std::stack<ElementData*> elementStack;
+	void HtmlReader::ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
+		std::stack<ElementData*> elementStack;
 		bool hasjs = false;
 		QString jsscript = "";
-        while (!xml.atEnd() && !xml.hasError()) {
-            QXmlStreamReader::TokenType token = xml.readNext();
-            if (token == QXmlStreamReader::StartElement) {
+		while (!xml.atEnd() && !xml.hasError()) {
+			QXmlStreamReader::TokenType token = xml.readNext();
+			if (token == QXmlStreamReader::StartElement) {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "script") {
 					hasjs = true;
@@ -64,8 +64,8 @@ namespace ysp::qt::html {
 					elements.append(data);
 					elementStack.push(data.get());
 				}
-            }
-            else if (token == QXmlStreamReader::Characters) {
+			}
+			else if (token == QXmlStreamReader::Characters) {
 				if (hasjs) {
 					jsscript += xml.text().toString();
 				}
@@ -76,8 +76,8 @@ namespace ysp::qt::html {
 						elementStack.top()->text = text;
 					}
 				}
-            }
-            else if (token == QXmlStreamReader::EndElement) {
+			}
+			else if (token == QXmlStreamReader::EndElement) {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "script") {
 					hasjs = false;
@@ -92,9 +92,9 @@ namespace ysp::qt::html {
 						break;
 					}
 				}
-            }
-        }
-	
+			}
+		}
+
 	}
 	void HtmlReader::ParseStyleElement(QXmlStreamReader& xml, CSSParser& parser, QList<CSSRule*>& rules) {
 		QString styleContent;
@@ -117,10 +117,10 @@ namespace ysp::qt::html {
 		else {
 			rules.clear();
 		}
-	
+
 	}
-	
-	bool HtmlReader::ContainsKey(QMap<QString, QString>& map,const QString& key) {
+
+	bool HtmlReader::ContainsKey(QMap<QString, QString>& map, const QString& key) {
 		const QString& lowerKey = key.toLower();
 		for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
 			if (it.key().compare(lowerKey, Qt::CaseInsensitive) == 0) {
@@ -147,7 +147,7 @@ namespace ysp::qt::html {
 			else {
 				widget->setParent(parent);
 			}
-			LinkBridge::ParseAttributes(element.get(),widget);
+			LinkBridge::ParseAttributes(element.get(), widget);
 			LinkBridge::jsParser.CreateDocument(widget);
 		}
 		return parent;

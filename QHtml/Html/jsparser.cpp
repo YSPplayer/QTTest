@@ -6,6 +6,7 @@
 #include "linkbridge.h"
 #include "listfilter.h"
 #include "cwidget.h"
+#include <QFile>
 namespace ysp::qt::html {
 	/*
 	栈顶索引 -1 栈底索引0
@@ -22,6 +23,7 @@ namespace ysp::qt::html {
 		bool success = ctx != nullptr;
 		if (success) {
 			binder = new JSBinder(ctx);
+			//LoadJsLibrary();
 			BindJsFunc();
 		}
 		init = success;
@@ -31,7 +33,7 @@ namespace ysp::qt::html {
 		if (ctx) {
 			duk_destroy_heap(ctx);
 			ctx = nullptr;
-		} 
+		}
 		if (binder) {
 			delete binder;
 			binder = nullptr;
@@ -61,9 +63,16 @@ namespace ysp::qt::html {
 		duk_set_top(ctx, top);
 		return success;
 	}
+	/// <summary>
+	/// 加载js三方库
+	/// </summary>
+	void JsParser::LoadJsLibrary() {
+
+	}
 	void JsParser::BindJsFunc() {
 		duk_push_pointer(ctx, this);
 		duk_put_global_string(ctx, JSPARSER); //设置自己为全局变量
+
 		binder->beginObject();
 		binder->bindMethod("log", ConsoleLog, DUK_VARARGS);
 		binder->setGlobal("console");
@@ -164,7 +173,7 @@ namespace ysp::qt::html {
 				break;
 			}
 		}
-		
+
 	}
 	void JsParser::Trigger(const QString& callbackType, const std::shared_ptr<JsValue>& param, bool global) {
 		const std::vector<std::shared_ptr<JsValue>>& params = { param };
@@ -194,14 +203,16 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("right", DUK_GETTER("right"), DUK_SETTER("right"));
 		binder->bindAttributeMethod("visible", DUK_GETTER("visible"), DUK_SETTER("visible"));
 		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
+		binder->bindAttributeMethod("disabled", DUK_GETTER("disabled"), DUK_SETTER("disabled"));
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
+		binder->bindMethod("setStyleSheet", SetStyleSheet, 1);
 		binder->bindMethod("append", Append, 1);
 		binder->bindMethod("remove", Remove, 1);
 		binder->bindMethod("delete", Delete, 0);
 		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
 	}
 
-	duk_ret_t JsParser::ThrowError(duk_context* ctx,duk_ret_t code, const QString& error) {
+	duk_ret_t JsParser::ThrowError(duk_context* ctx, duk_ret_t code, const QString& error) {
 		duk_type_error(ctx, error.toUtf8().constData());
 		return code;
 	}
@@ -219,7 +230,7 @@ namespace ysp::qt::html {
 		if (auto* w = ThisWidget(ctx)) {
 			QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
 			QString key(name);
-			if (key == "id") duk_push_string(ctx, w->objectName().toUtf8().constData());
+			if (key == "id") duk_push_string(ctx, CWidget::GetJsId(w).toUtf8().constData());
 			else if (key == "width") duk_push_int(ctx, w->width());
 			else if (key == "height") duk_push_int(ctx, w->height());
 			else if (key == "top") duk_push_int(ctx, w->y());
@@ -236,11 +247,14 @@ namespace ysp::qt::html {
 			}
 			else if (key == "visible") {
 				duk_push_boolean(ctx, w->isVisible());
-			} 
+			}
+			else if (key == "disabled") {
+				duk_push_boolean(ctx, w->isEnabled());
+			}
 			return 1;//返回值表示弹出
 		}
 
-		duk_push_undefined(ctx); 
+		duk_push_undefined(ctx);
 		return 1;
 	}
 	duk_ret_t JsParser::SetValue(duk_context* ctx, const char* name) {
@@ -251,7 +265,7 @@ namespace ysp::qt::html {
 		const QString key(name);
 
 		if (key == "width") {
-			if(!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 				"parameter is not number.");
 			const qint32 v = duk_require_int(ctx, 0);
 			w->resize(v, w->height());
@@ -301,6 +315,12 @@ namespace ysp::qt::html {
 			const bool v = duk_require_boolean(ctx, 0);
 			v ? w->show() : w->hide();
 		}
+		else if (key == "disabled") {
+			if (!duk_is_boolean(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not boolean.");
+			const bool v = duk_require_boolean(ctx, 0);
+			w->setEnabled(v);
+		}
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::Delete(duk_context* ctx) {
@@ -322,7 +342,7 @@ namespace ysp::qt::html {
 			w->deleteLater();//对象删除
 		}
 		duk_pop(ctx);
-		return 0; 
+		return 0;
 	}
 	JS_API duk_ret_t JsParser::ConsoleLog(duk_context* ctx) {
 		duk_push_string(ctx, " ");//往栈顶压入分隔符
@@ -332,7 +352,7 @@ namespace ysp::qt::html {
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::WindowAddEventListener(duk_context* ctx) {
-		if(duk_get_top(ctx) < 2) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+		if (duk_get_top(ctx) < 2) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"The number of parameters(2) is incorrect");
 		if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"parameter is not string.");
@@ -390,7 +410,7 @@ namespace ysp::qt::html {
 		duk_pop(ctx);
 		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [id](QWidget* widget)->bool {
 			return CWidget::GetJsId(widget) == id;
-		});
+			});
 		if (widegts.count() > 0 && widegts[0]) {
 			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
 			duk_get_global_string(ctx, globalKey.toUtf8().constData());
@@ -520,6 +540,18 @@ namespace ysp::qt::html {
 			return 1;
 		}
 	}
+	JS_API duk_ret_t JsParser::SetStyleSheet(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
+		const char* stylesheet = duk_require_string(ctx, 0);
+		QWidget* w = ThisWidget(ctx);
+		if (!w) return DUK_RET_ERROR;
+		auto ss = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));
+		w->setStyleSheet(ss);
+		return 0;
+	}
 	void JSBinder::beginObject() {
 		duk_push_object(ctx);
 	}
@@ -557,7 +589,7 @@ namespace ysp::qt::html {
 	void JSBinder::bindSubObject(const char* name) {
 		duk_push_object(ctx);
 		duk_put_prop_string(ctx, -2, name);
-		duk_push_object(ctx); 
+		duk_push_object(ctx);
 	}
 
 	void JSBinder::endSubObject() {

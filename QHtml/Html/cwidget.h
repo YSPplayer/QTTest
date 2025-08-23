@@ -13,11 +13,11 @@
 #include "callback.h"
 #include "linkbridge.h"
 namespace ysp::qt::html {
-	class CWidget: public QWidget {
-	//	Q_OBJECT 加了之后用不了自定义样式
+	class CWidget : public QWidget {
+		//	Q_OBJECT 加了之后用不了自定义样式
 	public:
 		CallBack callback;
-		CWidget(bool global = false,QWidget* parent = nullptr);
+		CWidget(bool global = false, QWidget* parent = nullptr);
 		~CWidget() {};
 		void TriggerGlobalEvent(const QString& key);
 		static void ShowConsoleWindow(bool show);

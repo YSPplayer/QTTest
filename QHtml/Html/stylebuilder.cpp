@@ -20,7 +20,7 @@ namespace ysp::qt::html {
 		return SetStyle("border-radius", QString("%1px").arg(radius));
 	}
 	StyleBuilder& StyleBuilder::SetBorderRadius(qint32 r1, qint32 r2, qint32 r3, qint32 r4) {
-		return SetStyle("border-radius",QString("%1px %2px %3px %4px").arg(r1).arg(r2).arg(r3)
+		return SetStyle("border-radius", QString("%1px %2px %3px %4px").arg(r1).arg(r2).arg(r3)
 			.arg(r4));
 	}
 	StyleBuilder& StyleBuilder::SetBackgroundColor(const QColor& color) {
