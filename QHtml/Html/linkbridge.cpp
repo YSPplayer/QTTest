@@ -5,7 +5,7 @@
 #include <QDebug>
 #include "listfilter.h"
 #include "linkbridge.h"
-#include "cwidget.h"
+#include "include.h"
 namespace ysp::qt::html {
 #define HTML_ADD_EVENT  R"(
 			window.addEventListener('load', function() {
@@ -40,7 +40,8 @@ namespace ysp::qt::html {
 #endif // _DEBUG
 				CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 			}
-			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"} };
+			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"},
+				{"QProgressBar","progress"} };
 			void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 				JsClass* obj = new JsClass;
 				(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
@@ -200,6 +201,12 @@ namespace ysp::qt::html {
 				}
 				else if (lkey == "left") {
 					widget->move(ToNumberString(value).toInt(), widget->y());
+				}
+				else if (lkey == "text-align" && QString(widget->metaObject()->className())
+					== "QLabel") {
+					if (value == "center") {
+						((CLabel*)widget)->setAlignment(Qt::AlignCenter);
+					}
 				}
 				else if (lkey == "bottom" && parent) {
 					if (attributes.contains("height")) {

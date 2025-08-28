@@ -96,6 +96,9 @@
     <ClInclude Include="Html\clabel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Html\include.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Html\cssparser.h">

@@ -139,7 +139,9 @@ namespace ysp::qt::html {
 		for (auto& element : elements) {
 			QWidget* widget = nullptr;
 			if (element->tag == "div") widget = new CWidget;
-			else if (element->tag == "progress")widget = new CProgressBar;
+			else if (element->tag == "progress") {
+				widget = new CProgressBar;
+			}
 			else if (element->tag == "label") {
 				CLabel* label = new CLabel;
 				label->setText(element->text);

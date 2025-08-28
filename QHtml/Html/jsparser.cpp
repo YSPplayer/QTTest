@@ -7,6 +7,7 @@
 #include "listfilter.h"
 #include "cwidget.h"
 #include "clabel.h"
+#include "cprogressbar.h"
 #include <QFile>
 namespace ysp::qt::html {
 	/*
@@ -525,6 +526,7 @@ namespace ysp::qt::html {
 		QWidget* widget = nullptr;
 		if (classname == "div") widget = new CWidget();
 		else if (classname == "label") widget = new CLabel();
+		else if (classname == "progress") widget = new CProgressBar();
 		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
 		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);

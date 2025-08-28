@@ -134,6 +134,7 @@
     <ClInclude Include="Html\cprogressbar.h" />
     <ClInclude Include="Html\cwidget.h" />
     <QtMoc Include="Html\htmlreader.h" />
+    <ClInclude Include="Html\include.h" />
     <ClInclude Include="Html\jsparser.h" />
     <ClInclude Include="Html\linkbridge.h" />
     <ClInclude Include="Html\listfilter.h" />

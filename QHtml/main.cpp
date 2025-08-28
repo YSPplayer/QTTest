@@ -9,9 +9,10 @@ int main(int argc, char* argv[])
 	  window.show();*/
 	HtmlReader* r = new HtmlReader("D:/YueShaoPu/QTTest/QHtml/QHtml/main.html");
 	CWidget* widget = r->Parse();
-	//for (QWidget* w : widget->findChildren<QWidget*>()) {
-	//    qDebug() << w->geometry();
-	//}
+	for (QWidget* w : widget->findChildren<QWidget*>()) {
+		qDebug() << w->geometry();
+		qDebug() << w->metaObject()->className();
+	}
 	CWidget::ShowConsoleWindow(true);
 
 	widget->show();
