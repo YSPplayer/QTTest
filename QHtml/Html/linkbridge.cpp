@@ -40,7 +40,7 @@ namespace ysp::qt::html {
 #endif // _DEBUG
 				CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 			}
-			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"} };
+			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"} };
 			void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 				JsClass* obj = new JsClass;
 				(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
@@ -165,7 +165,8 @@ namespace ysp::qt::html {
 					if (key == "style") continue;
 					ParseKey(key, widget, builder, attributes);
 				}
-				widget->setStyleSheet(builder.ToString());
+				QString bulider = builder.ToString();
+				if (bulider != "") widget->setStyleSheet(bulider);
 			}
 			void LinkBridge::ParseStyleString(const QString& styleValue, QMap<QString, QString>& map) {
 				if (styleValue.isEmpty()) return;

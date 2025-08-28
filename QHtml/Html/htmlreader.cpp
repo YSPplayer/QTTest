@@ -6,6 +6,8 @@
 #include <QFile>
 #include "htmlreader.h"
 #include "listfilter.h"
+#include "cprogressbar.h"
+#include "clabel.h"
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
 		QFile file(filePath);
@@ -135,9 +137,13 @@ namespace ysp::qt::html {
 		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
 		for (auto& element : elements) {
-			CWidget* widget = nullptr;
-			if (element->tag == "div") {
-				widget = new CWidget;
+			QWidget* widget = nullptr;
+			if (element->tag == "div") widget = new CWidget;
+			else if (element->tag == "progress")widget = new CProgressBar;
+			else if (element->tag == "label") {
+				CLabel* label = new CLabel;
+				label->setText(element->text);
+				widget = label;
 			}
 			if (!widget) continue;
 			map[element.get()] = widget;

@@ -2,18 +2,18 @@
 #include <QtWidgets/QApplication>
 #include "Html/htmlreader.h"
 using namespace ysp::qt::html;
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    QApplication app(argc, argv);
-  /*  QHtml window;
-    window.show();*/
-    HtmlReader *r = new HtmlReader("E:/QTtest/QTTest/QHtml/QHtml/main.html");
-    CWidget* widget = r->Parse();
-    //for (QWidget* w : widget->findChildren<QWidget*>()) {
-    //    qDebug() << w->geometry();
-    //}
-    CWidget::ShowConsoleWindow(true);
+	QApplication app(argc, argv);
+	/*  QHtml window;
+	  window.show();*/
+	HtmlReader* r = new HtmlReader("D:/YueShaoPu/QTTest/QHtml/QHtml/main.html");
+	CWidget* widget = r->Parse();
+	//for (QWidget* w : widget->findChildren<QWidget*>()) {
+	//    qDebug() << w->geometry();
+	//}
+	CWidget::ShowConsoleWindow(true);
 
-    widget->show();
-    return app.exec();
+	widget->show();
+	return app.exec();
 }

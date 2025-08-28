@@ -6,6 +6,7 @@
 #include "linkbridge.h"
 #include "listfilter.h"
 #include "cwidget.h"
+#include "clabel.h"
 #include <QFile>
 namespace ysp::qt::html {
 	/*
@@ -521,8 +522,9 @@ namespace ysp::qt::html {
 		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"parameter is not string.");
 		const QString& classname = QString::fromUtf8(duk_require_string(ctx, 0)).trimmed().toLower();
-		CWidget* widget = nullptr;
+		QWidget* widget = nullptr;
 		if (classname == "div") widget = new CWidget();
+		else if (classname == "label") widget = new CLabel();
 		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
 		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);
@@ -548,8 +550,8 @@ namespace ysp::qt::html {
 		const char* stylesheet = duk_require_string(ctx, 0);
 		QWidget* w = ThisWidget(ctx);
 		if (!w) return DUK_RET_ERROR;
-		auto ss = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));
-		w->setStyleSheet(ss);
+		auto style = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));
+		w->setStyleSheet(style);
 		return 0;
 	}
 	void JSBinder::beginObject() {

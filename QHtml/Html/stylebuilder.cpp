@@ -72,9 +72,11 @@ namespace ysp::qt::html {
 		return Build();
 	}
 	QString StyleBuilder::Build() {
+		QString style = styles.join(" ");
 #ifdef _DEBUG
-		qDebug() << QString("%1 { %2 }").arg(format).arg(styles.join(" "));
+		qDebug() << QString("%1 { %2 }").arg(format).arg(style);
 #endif // _DEBUG
-		return QString("%1 { %2 }").arg(format).arg(styles.join(" "));
+		if (style == "") return "";
+		return QString("%1 { %2 }").arg(format).arg(style);
 	}
 }

@@ -17,7 +17,7 @@ namespace ysp::qt::html {
 		//	Q_OBJECT 加了之后用不了自定义样式
 	public:
 		CallBack callback;
-		CWidget(bool global = false, QWidget* parent = nullptr);
+		explicit CWidget(bool global = false, QWidget* parent = nullptr);
 		~CWidget() {};
 		void TriggerGlobalEvent(const QString& key);
 		static void ShowConsoleWindow(bool show);
