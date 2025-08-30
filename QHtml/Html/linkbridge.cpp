@@ -3,6 +3,8 @@
 	2025.8.3
 */
 #include <QDebug>
+#include <QFontDatabase>
+#include <QApplication>
 #include "listfilter.h"
 #include "linkbridge.h"
 #include "include.h"
@@ -127,10 +129,6 @@ namespace ysp::qt::html {
 						widget->setProperty("jsid", id);
 					}
 				}
-				if (attributes.contains("class")) { //优先提取class
-					classname = attributes["class"];
-					widget->setProperty("class", classname);
-				}
 				//每一个对象都会有一个独立的id(qt的id 非js id)
 				widget->setObjectName(CWidget::GetKeyString(widget));
 				//增加样式部分
@@ -151,6 +149,22 @@ namespace ysp::qt::html {
 						}
 					}
 				}
+				if (attributes.contains("class")) { //优先提取class
+					classname = attributes["class"];
+					widget->setProperty("class", classname);
+				}
+				if (attributes.contains("font-family")) { //提取字体
+					const QStringList& fontPriority = attributes["font-family"].split(",");
+					QFontDatabase fontDB;
+					const QStringList& allFonts = fontDB.families();
+					for (const QString& fontName : fontPriority) {
+						if (allFonts.contains(fontName)) {
+							QFont font = QApplication::font();
+							font.setFamily(fontName);
+							widget->setFont(font);
+						}
+					}
+				}
 				LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 				auto& builder = LinkBridge::styleBuilder[widget];
 				//优先判断是否有style修饰，优先解析style中的值
@@ -162,6 +176,26 @@ namespace ysp::qt::html {
 					}
 				}
 				//解析非style值的标签
+				for (const QString& key : attributes.keys()) {
+					if (key == "style") continue;
+					ParseKey(key, widget, builder, attributes);
+				}
+				QString bulider = builder.ToString();
+				if (bulider != "") widget->setStyleSheet(bulider);
+			}
+			void LinkBridge::ParseAttributesBody(QWidget* widget) {
+				QMap<QString, QString> attributes;
+				const QList<CSSRule*>& filterrules = ListFilter::Where<CSSRule*>(cssrules, [=](CSSRule* css)->bool {
+					return css->selector == "body";
+					});
+				for (CSSRule* filterrule : filterrules) {
+					QMap<QString, CSSProperty>& filterattributes = filterrule->properties;
+					for (const auto& key : filterattributes.keys()) {
+						attributes[filterattributes[key].name] = filterattributes[key].value;
+					}
+				}
+				LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
+				auto& builder = LinkBridge::styleBuilder[widget];
 				for (const QString& key : attributes.keys()) {
 					if (key == "style") continue;
 					ParseKey(key, widget, builder, attributes);
@@ -188,6 +222,7 @@ namespace ysp::qt::html {
 			}
 			void LinkBridge::ParseKey(const QString& key, QWidget* widget, StyleBuilder& builder, QMap<QString, QString>& attributes) {
 				QWidget* parent = widget->parentWidget() ? widget->parentWidget() : nullptr;
+				QString classname = QString(widget->metaObject()->className());
 				const QString lkey = key;
 				QString value = attributes[key].trimmed();
 				if (lkey == "width") {
@@ -202,11 +237,27 @@ namespace ysp::qt::html {
 				else if (lkey == "left") {
 					widget->move(ToNumberString(value).toInt(), widget->y());
 				}
-				else if (lkey == "text-align" && QString(widget->metaObject()->className())
-					== "QLabel") {
+				else if (lkey == "text-align" && classname == "QLabel") {
 					if (value == "center") {
 						((CLabel*)widget)->setAlignment(Qt::AlignCenter);
 					}
+				}
+				else if (classname == "QProgressBar") {
+					QProgressBar* bar = ((QProgressBar*)widget);
+					if (lkey == "min") {
+						bar->setMinimum(ToNumberString(value).toInt());
+					}
+					else if (lkey == "max") {
+						bar->setMaximum(ToNumberString(value).toInt());
+					}
+					else if (lkey == "value") {
+						bar->setValue(ToNumberString(value).toInt());
+					}
+				}
+				else if (lkey == "font-size") {
+					QFont font = widget->font();
+					font.setPointSize(ToNumberString(value).toInt());
+					widget->setFont(font);
 				}
 				else if (lkey == "bottom" && parent) {
 					if (attributes.contains("height")) {
@@ -277,6 +328,20 @@ namespace ysp::qt::html {
 			QString LinkBridge::ReplaceAfterHash(QString input, const QString& replacement) {
 				qint32 hashPos = input.indexOf('#');
 				if (hashPos == -1) return input;
+
+				// 检查 # 是否在颜色值中（前面有冒号）
+				if (hashPos > 0 && input.at(hashPos - 1) == ':') {
+					return input;
+				}
+
+				// 检查 # 是否在属性值中（前面有空格或冒号）
+				if (hashPos > 0) {
+					QChar prevChar = input.at(hashPos - 1);
+					if (prevChar == ':' || prevChar == ' ') {
+						return input;
+					}
+				}
+
 				QList<QChar> filter = { '_','-', '\\','/' };
 				qint32 endPos = hashPos + 1;
 				while (endPos < input.length()) {

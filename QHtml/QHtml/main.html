@@ -1,122 +1,94 @@
 <html>
 <head>
 	<style>
-		#dds {
+		body {
+			width: 500px;
+			height: 100px;
+		}
+		/* #dds {
 		width: 500px;
 		background-color:#38DAD8
 		}
-		/* #dds:hover {
-			background-color: blue;
-		} */
-		/* .out2 {
-			background-color: red;
-		} */
 		div:hover {
 			background-color: rgb(172, 118, 118);
+		} */
+		#progress{
+			width: 500px;
+			height: 100px;
+			background-color: transparent;
+			top: 30px;
+			left: 100px;
+		}
+		/* #progressBar{
+			width: 100px;
+			height: 50px;
+			background-color: #8cd875;
+		} */
+		#progressBar {
+			width: 200px;
+			height: 10px;
+			background-color: #8cd875;
+			min:0;
+			max:100;
+			value:50;
+		}
+		label {
+			width: 30px;
+			height: 30px;
+			background-color: red;
+			text-align: center;
+			font-family: 'Microsoft YaHei';
+			font-size:12px;
+		}
+		#labelvalue {
+			right: 100px;
+			top: 10px;
 		}
 	</style>
 </head>
 <body>
-	<div  id="dds" class="out2" style="width: 500px;height:600px ;border-radius:5px 10px 10px 0px;
+	<div id="progress"> 
+		<label id="labelkey">cpu</label>
+		<progress id="progressBar"> </progress>
+		<label id="labelvalue">%50</label>
+		 <!-- <label id="progressBar">测试文本</label> -->
+	</div>
+	<!-- <div  id="dds" class="out2" style="width: 500px;height:600px ;border-radius:5px 10px 10px 0px;
 	background-color: blueviolet; " right ="50px" bottom ="0px">
 		<div id="dds2" class="out2" width="50px" height ="100px" left ="0px" top ="0px" 
 			 ondblclick="removeDiv3()"> </div>
-	</div>
+	</div> -->
 	<script>
-		// var removeDiv = function() {
-		// 	console.log('removeDiv');
-		// }
-		// function removeDiv() {
-    	// 	console.log('removeDiv454545');
-		// }
-		// function removeDiv2(e) {
-    	// 	console.log('removeDiv2');
-		// 	console.log(e.button);
-		// }
-		function removeDiv3(e) {
-    		console.log('removeDiv3');
-			console.log(e.button);
-			console.log(e.target);
-			console.log("width:" +e.target.width);
-		}
-		function removeDiv4(e) {
-    		console.log('removeDiv4');
-		}
-		const main = function() {
-		console.log('ho to bug 你好 世界!');
-		const div = document.getElementById('dds');
-		// div.bottom = 0;
-		// div.right = 0;
-		div.width = 500;
-		div.height = 500;
-		div.visible = true;
-		//div.style = 'border-radius: 0px 0px 0px 0px';
-		//div.style = 'border-radius: 0px 0px 0px 0px';
-		console.log('visible:' + div.visible);
-		console.log('bottom:' + div.bottom);
-		console.log('style:' + div.style);
-		var div2 = document.createElement('div');
-		div2.style = 'background-color:red';
-		div2.width = 154;
-		div2.height = 99;
-		div2.left = 10;
-		div2.top = 50;
-		div2.visible = true;
-		console.log('div.id:' + div.id);
-		//console.log(`div.id2:${div.id}2`);
-		//div.setStyleSheet(`QWidget#${div.id}{background-color:yellow;}`);
-		//div2 = null;
-		div.append(div2);
-		//div.remove(div2);
-		// div.addEventListener('click',function() {
-		// 	var ss = document.getElementById('dds');
-		// 	ss.remove();
-		// })
-		div.addEventListener('click', (function(elementToRemove) {
-            return function() {
-                console.log('移除的元素:', elementToRemove);
-                const ss = document.getElementById('dds');
-                ss.remove(elementToRemove);
-				// elementToRemove.width = 0;
-				elementToRemove.delete();
-				elementToRemove = null;
-            };
-        })(div2));
-
-		// div.addEventListener('mousemove',function(e) {
-		// console.log(e.button);
-		// console.log(e.offsetX);
-		// console.log(e.offsetY);
-		// })
-		// div.addEventListener('mousedown',function(e) {
-		// 	console.log(e.button);
-		// 	//console.log(e.button);eventKeyBytes = "eventKeyBytes = "QWidgetdds2347bd75d30resize0""
-		// })
-
-		// window.addEventListener('wheel',function(e) {
-		// 	console.log('wheel');
-		// 	console.log("deltaX",e.deltaX);
-		// 	console.log("deltaY",e.deltaY);
-		// })
-	}
 		window.addEventListener('load', function() {
-		main();
-		console.log('load');
+			const labelkey = _['#']('labelkey');
+			const progress = _['#']('progressBar');
+			progress.setStyleSheet(`
+			QProgressBar{
+			border: 2px solid #8f8f91;
+			border-radius: 5px;
+			 text-align: center;
+			  background-color: #f0f0f0;
+			   color: #333333;
+			   font-weight: bold;
+			}
+			   QProgressBar::chunk {
+			    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+				 stop:0 #4CAF50, stop:1 #45a049);
+				  border-radius: 3px;
+		}
+			`);
+			const labelvalue = _['#']('labelvalue');
+			labelkey.width = labelkey.textWidth;
+			progress.left = labelkey.leftEnd + 5;
+			progress.top = labelkey.top + labelkey.textHeight / 2;
+			labelvalue.width = labelvalue.textWidth;
+			console.log(progress.left);
+			console.log(progress.width);
+			console.log(progress.leftEnd);
+			labelvalue.left = progress.leftEnd + 5;
+			labelvalue.top = labelkey.top;
+			// const progressBar = _#('progressBar');
 		});
-		window.addEventListener('close', function() {
-		console.log('close');
-		});
-		// window.addEventListener('keydown', function(e) {
-		// console.log(e.key);
-		// });
-		// window.addEventListener('resize',function(e) {
-		// 	console.log('resize');
-		// 	console.log(e.oldOffsetHeight);
-		// 	console.log(e.oldOffsetWidth);
-		// 	console.log(e.offsetHeight);
-		// 	console.log(e.offsetWidth);
-	
-		// })
 	</script>
 </body>
 </html>

@@ -9,6 +9,7 @@
 #include "clabel.h"
 #include "cprogressbar.h"
 #include <QFile>
+#include "jslibrary.h"
 namespace ysp::qt::html {
 	/*
 	栈顶索引 -1 栈底索引0
@@ -25,7 +26,7 @@ namespace ysp::qt::html {
 		bool success = ctx != nullptr;
 		if (success) {
 			binder = new JSBinder(ctx);
-			//LoadJsLibrary();
+			LoadJsLibrary();
 			BindJsFunc();
 		}
 		init = success;
@@ -69,7 +70,7 @@ namespace ysp::qt::html {
 	/// 加载js三方库
 	/// </summary>
 	void JsParser::LoadJsLibrary() {
-
+		RunJs(JS_LIBRARY_SCRIPT.toUtf8().constData());
 	}
 	void JsParser::BindJsFunc() {
 		duk_push_pointer(ctx, this);
@@ -199,9 +200,15 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("id", DUK_GETTER("id"), nullptr);
 		binder->bindAttributeMethod("width", DUK_GETTER("width"), DUK_SETTER("width"));
 		binder->bindAttributeMethod("height", DUK_GETTER("height"), DUK_SETTER("height"));
+		binder->bindAttributeMethod("min", DUK_GETTER("min"), DUK_SETTER("min"));
+		binder->bindAttributeMethod("max", DUK_GETTER("max"), DUK_SETTER("max"));
+		binder->bindAttributeMethod("value", DUK_GETTER("value"), DUK_SETTER("value"));
+		binder->bindAttributeMethod("textWidth", DUK_GETTER("textWidth"), nullptr);
+		binder->bindAttributeMethod("textHeight", DUK_GETTER("textHeight"), nullptr);
 		binder->bindAttributeMethod("top", DUK_GETTER("top"), DUK_SETTER("top"));
 		binder->bindAttributeMethod("bottom", DUK_GETTER("bottom"), DUK_SETTER("bottom"));
 		binder->bindAttributeMethod("left", DUK_GETTER("left"), DUK_SETTER("left"));
+		binder->bindAttributeMethod("leftEnd", DUK_GETTER("leftEnd"), nullptr);
 		binder->bindAttributeMethod("right", DUK_GETTER("right"), DUK_SETTER("right"));
 		binder->bindAttributeMethod("visible", DUK_GETTER("visible"), DUK_SETTER("visible"));
 		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
@@ -231,6 +238,7 @@ namespace ysp::qt::html {
 	JS_API duk_ret_t JsParser::GetValue(duk_context* ctx, const char* name) {
 		if (auto* w = ThisWidget(ctx)) {
 			QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
+			QString classname = w->metaObject()->className();
 			QString key(name);
 			if (key == "id") duk_push_string(ctx, CWidget::GetJsId(w).toUtf8().constData());
 			else if (key == "width") duk_push_int(ctx, w->width());
@@ -240,6 +248,7 @@ namespace ysp::qt::html {
 				parent ? duk_push_int(ctx, parent->height() - w->y() - w->height()) : duk_push_int(ctx, -1);
 			}
 			else if (key == "left") duk_push_int(ctx, w->x());
+			else if (key == "leftEnd") duk_push_int(ctx, w->x() + w->width());
 			else if (key == "right") {
 				parent ? duk_push_int(ctx, parent->width() - w->x() - w->width()) : duk_push_int(ctx, -1);
 			}
@@ -253,6 +262,34 @@ namespace ysp::qt::html {
 			else if (key == "disabled") {
 				duk_push_boolean(ctx, w->isEnabled());
 			}
+			else if (classname == "QLabel") {
+				QLabel* qlabel = (QLabel*)w;
+				if (key == "textWidth") {
+					QFontMetrics fm(qlabel->font());
+					QString text = qlabel->text();
+					duk_push_int(ctx, fm.size(Qt::TextSingleLine, text).width());
+				}
+				else if (key == "textHeight") {
+					QFontMetrics fm(qlabel->font());
+					QString text = qlabel->text();
+					duk_push_int(ctx, fm.size(Qt::TextSingleLine, text).height());
+				}
+			}
+			else if (classname == "QProgressBar") {
+				QProgressBar* bar = ((QProgressBar*)w);
+				if (key == "min") {
+					duk_push_int(ctx, bar->minimum());
+				}
+				else if (key == "max") {
+					duk_push_int(ctx, bar->maximum());
+				}
+				else if (key == "value") {
+					duk_push_int(ctx, bar->value());
+				}
+			}
+			else {
+				duk_push_undefined(ctx);
+			}
 			return 1;//返回值表示弹出
 		}
 
@@ -262,7 +299,7 @@ namespace ysp::qt::html {
 	duk_ret_t JsParser::SetValue(duk_context* ctx, const char* name) {
 		QWidget* w = ThisWidget(ctx);
 		if (!w) return 0;
-
+		QString classname = w->metaObject()->className();
 		QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
 		const QString key(name);
 
@@ -322,6 +359,21 @@ namespace ysp::qt::html {
 				"parameter is not boolean.");
 			const bool v = duk_require_boolean(ctx, 0);
 			w->setEnabled(v);
+		}
+		else if (classname == "QProgressBar") {
+			QProgressBar* bar = ((QProgressBar*)w);
+			if (!duk_is_number(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"parameter is not number.");
+			const qint32 v = duk_require_int(ctx, 0);
+			if (key == "min") {
+				bar->setMinimum(v);
+			}
+			else if (key == "max") {
+				bar->setMaximum(v);
+			}
+			else if (key == "value") {
+				bar->setValue(v);
+			}
 		}
 		return 0;
 	}
@@ -547,13 +599,13 @@ namespace ysp::qt::html {
 	JS_API duk_ret_t JsParser::SetStyleSheet(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"The number of parameters(1) is incorrect");
-		if (!duk_is_string(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"parameter is not string.");
 		const char* stylesheet = duk_require_string(ctx, 0);
 		QWidget* w = ThisWidget(ctx);
 		if (!w) return DUK_RET_ERROR;
-		auto style = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));
-		w->setStyleSheet(style);
+		/*auto style = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));*/
+		w->setStyleSheet(stylesheet);
 		return 0;
 	}
 	void JSBinder::beginObject() {

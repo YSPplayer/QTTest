@@ -38,6 +38,7 @@ namespace ysp::qt::html {
 		static void TriggerJsEvent(const QString& target, const QString& key, bool global = false);
 		static void TriggerJsEvent(const QString& key, bool global = false);
 		static void ParseAttributes(ElementData* element, QWidget* widget);
+		static void ParseAttributesBody(QWidget* widget);
 		static void ParseStyleString(const QString& styleValue, QMap<QString, QString>& map);
 		static void ParseKey(const QString& key, QWidget* widget, StyleBuilder& builder, QMap<QString, QString>& attributes);
 		static QString ExtractFuncString(const QString& input);

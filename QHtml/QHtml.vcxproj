@@ -120,6 +120,7 @@
     <ClCompile Include="Html\cssparser.cpp" />
     <ClCompile Include="Html\cwidget.cpp" />
     <ClCompile Include="Html\htmlreader.cpp" />
+    <ClCompile Include="Html\jscompiler.cpp" />
     <ClCompile Include="Html\jsparser.cpp" />
     <ClCompile Include="Html\linkbridge.cpp" />
     <ClCompile Include="Html\stylebuilder.cpp" />
@@ -135,6 +136,8 @@
     <ClInclude Include="Html\cwidget.h" />
     <QtMoc Include="Html\htmlreader.h" />
     <ClInclude Include="Html\include.h" />
+    <ClInclude Include="Html\jscompiler.h" />
+    <ClInclude Include="Html\jslibrary.h" />
     <ClInclude Include="Html\jsparser.h" />
     <ClInclude Include="Html\linkbridge.h" />
     <ClInclude Include="Html\listfilter.h" />

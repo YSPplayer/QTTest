@@ -8,6 +8,7 @@
 #include "listfilter.h"
 #include "cprogressbar.h"
 #include "clabel.h"
+#include "jscompiler.h"
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
 		QFile file(filePath);
@@ -20,6 +21,7 @@ namespace ysp::qt::html {
 		const QByteArray& data = file.readAll();
 		file.close();
 		html = QString::fromUtf8(data);
+		html = JsCompiler::ToCompilerScript(html, true);//替换特殊字符
 	}
 	CWidget* HtmlReader::Parse() {
 		QXmlStreamReader xml(html);
@@ -44,6 +46,7 @@ namespace ysp::qt::html {
 		CWidget* widget = ElementsToQWidegt(elements);
 		return widget;
 	}
+
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
 		std::stack<ElementData*> elementStack;
 		bool hasjs = false;
@@ -54,6 +57,7 @@ namespace ysp::qt::html {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "script") {
 					hasjs = true;
+					jsscript.clear();
 				}
 				else {
 					auto data = std::make_shared<ElementData>();
@@ -83,6 +87,10 @@ namespace ysp::qt::html {
 				const QString& elementName = xml.name().toString().toLower();
 				if (elementName == "script") {
 					hasjs = false;
+					//转化回来
+					jsscript.replace("&lt;", "<");
+					jsscript.replace("&gt;", ">");
+					//jsscript.replace("&amp;", "&");
 					LinkBridge::jsParser.RunJs(jsscript.toUtf8().constData());//执行脚本
 					jsscript = "";
 				}
@@ -136,6 +144,8 @@ namespace ysp::qt::html {
 		QMap<ElementData*, QWidget*> map;
 		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
+		//设置body样式
+		LinkBridge::ParseAttributesBody(parent);
 		for (auto& element : elements) {
 			QWidget* widget = nullptr;
 			if (element->tag == "div") widget = new CWidget;
