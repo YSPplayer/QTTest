@@ -131,6 +131,10 @@ namespace ysp::qt::html {
 				}
 				//每一个对象都会有一个独立的id(qt的id 非js id)
 				widget->setObjectName(CWidget::GetKeyString(widget));
+				if (attributes.contains("class")) { //优先提取class
+					classname = attributes["class"];
+					widget->setProperty("class", classname);
+				}
 				//增加样式部分
 				const QList<CSSRule*>& filterrules = ListFilter::Where<CSSRule*>(cssrules, [=](CSSRule* css)->bool {
 					return css->CheckRule(widget);
@@ -148,10 +152,6 @@ namespace ysp::qt::html {
 							attributes[filterattributes[key].name] = filterattributes[key].value;
 						}
 					}
-				}
-				if (attributes.contains("class")) { //优先提取class
-					classname = attributes["class"];
-					widget->setProperty("class", classname);
 				}
 				if (attributes.contains("font-family")) { //提取字体
 					const QStringList& fontPriority = attributes["font-family"].split(",");
@@ -237,23 +237,6 @@ namespace ysp::qt::html {
 				else if (lkey == "left") {
 					widget->move(ToNumberString(value).toInt(), widget->y());
 				}
-				else if (lkey == "text-align" && classname == "QLabel") {
-					if (value == "center") {
-						((CLabel*)widget)->setAlignment(Qt::AlignCenter);
-					}
-				}
-				else if (classname == "QProgressBar") {
-					QProgressBar* bar = ((QProgressBar*)widget);
-					if (lkey == "min") {
-						bar->setMinimum(ToNumberString(value).toInt());
-					}
-					else if (lkey == "max") {
-						bar->setMaximum(ToNumberString(value).toInt());
-					}
-					else if (lkey == "value") {
-						bar->setValue(ToNumberString(value).toInt());
-					}
-				}
 				else if (lkey == "font-size") {
 					QFont font = widget->font();
 					font.setPointSize(ToNumberString(value).toInt());
@@ -292,6 +275,24 @@ namespace ysp::qt::html {
 					const QString& func = ExtractFuncString(value);
 					const QString& jsscript = QString(HTML_ADD_EVENT).arg(CWidget::GetKeyString(widget).toUtf8().constData()).arg(eventstr).arg(func);
 					LinkBridge::jsParser.RunJs(jsscript.toUtf8().constData());
+				}
+				else if (classname == "QLabel") {
+					CLabel* clabel = ((CLabel*)widget);
+					if (lkey == "text-align" && value == "center") {
+						clabel->setAlignment(Qt::AlignCenter);
+					}
+				}
+				else if (classname == "QProgressBar") {
+					QProgressBar* bar = ((QProgressBar*)widget);
+					if (lkey == "min") {
+						bar->setMinimum(ToNumberString(value).toInt());
+					}
+					else if (lkey == "max") {
+						bar->setMaximum(ToNumberString(value).toInt());
+					}
+					else if (lkey == "value") {
+						bar->setValue(ToNumberString(value).toInt());
+					}
 				}
 			}
 			QString LinkBridge::ToNumberString(const QString& key) {
