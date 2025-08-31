@@ -21,10 +21,12 @@ namespace ysp::qt::html {
 		CWidget* Parse();
 	private:
 		static void ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements);
+		static void ParseCustomElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements);
 		static void ParseStyleElement(QXmlStreamReader& xml, CSSParser& parser, QList<CSSRule*>& rules);
 		QString html;
 		QList<std::shared_ptr<ElementData>> elementDatas;
-		static CWidget* ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements);
+		static CWidget* ElementsToQWidegt(QList<std::shared_ptr<ElementData>>& elements,
+			QList<std::shared_ptr<ElementData>>& customs);
 		static bool ContainsKey(QMap<QString, QString>& map, const QString& key);
 	};
 }

@@ -26,6 +26,7 @@ namespace ysp::qt::html {
 	CWidget* HtmlReader::Parse() {
 		QXmlStreamReader xml(html);
 		QList<std::shared_ptr<ElementData>> elements;
+		QList<std::shared_ptr<ElementData>> customs;
 		QList<CSSRule*> cssrules;
 		CSSParser cssParser;
 		LinkBridge::jsParser.Init();//初始化全局JS环境
@@ -39,11 +40,15 @@ namespace ysp::qt::html {
 				else if (elementName == "style") {
 					ParseStyleElement(xml, cssParser, cssrules);
 				}
+				else if (elementName == "custom") { //自定义组件
+					ParseCustomElements(xml, customs);
+				}
+				//qDebug() << "elementName:" << customs;
 			}
 		}
 		//全局样式
 		if (cssrules.count() > 0) LinkBridge::cssrules.append(cssrules);
-		CWidget* widget = ElementsToQWidegt(elements);
+		CWidget* widget = ElementsToQWidegt(elements, customs);
 		return widget;
 	}
 
@@ -106,6 +111,40 @@ namespace ysp::qt::html {
 		}
 
 	}
+	void HtmlReader::ParseCustomElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
+		std::stack<ElementData*> elementStack;
+		while (!xml.atEnd() && !xml.hasError()) {
+			QXmlStreamReader::TokenType token = xml.readNext();
+			if (token == QXmlStreamReader::StartElement) {
+				const QString& elementName = xml.name().toString().toLower();
+				auto data = std::make_shared<ElementData>();
+				data->parent = elementStack.empty() ? nullptr : elementStack.top();
+				data->tag = xml.name().toString();
+				const QXmlStreamAttributes& attributes = xml.attributes();
+				for (const QXmlStreamAttribute& attr : attributes) {
+					data->attributes[attr.name().toString().toLower()] = attr.value().toString();
+				}
+				elements.append(data);
+				elementStack.push(data.get());
+			}
+			else if (token == QXmlStreamReader::Characters) {
+				const QString& text = xml.text().toString().trimmed();
+				if (!text.isEmpty() && !elementStack.empty())
+				{
+					elementStack.top()->text = text;
+				}
+			}
+			else if (token == QXmlStreamReader::EndElement) {
+				const QString& elementName = xml.name().toString().toLower();
+				if (!elementStack.empty()) {
+					elementStack.pop();
+				}
+				if (elementName == "custom" && elementStack.empty()) {
+					break;
+				}
+			}
+		}
+	}
 	void HtmlReader::ParseStyleElement(QXmlStreamReader& xml, CSSParser& parser, QList<CSSRule*>& rules) {
 		QString styleContent;
 		while (!xml.atEnd() && !xml.hasError()) {
@@ -140,13 +179,16 @@ namespace ysp::qt::html {
 		}
 		return false;
 	}
-	CWidget* HtmlReader::ElementsToQWidegt(const QList<std::shared_ptr<ElementData>>& elements) {
+	CWidget* HtmlReader::ElementsToQWidegt(QList<std::shared_ptr<ElementData>>& elements,
+		 QList<std::shared_ptr<ElementData>>& customs) {
 		QMap<ElementData*, QWidget*> map;
 		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
 		//设置body样式
 		LinkBridge::ParseAttributesBody(parent);
-		for (auto& element : elements) {
+		for (qint32 i = 0; i < elements.size(); ++i) {
+			auto& element = elements[i];
+			if (!element.get()) continue;
 			QWidget* widget = nullptr;
 			if (element->tag == "div") widget = new CWidget;
 			else if (element->tag == "progress") {
@@ -156,6 +198,30 @@ namespace ysp::qt::html {
 				CLabel* label = new CLabel;
 				label->setText(element->text);
 				widget = label;
+			}
+			else {
+				ElementData* eparent = element->parent;
+				//自定义组件
+				const auto& custom = ListFilter::Where<std::shared_ptr<ElementData>>(
+					customs, [&element](const std::shared_ptr<ElementData>& edata)->bool {
+						return element->tag == edata->tag;
+					});
+				if (custom.count() > 0) {
+					const std::shared_ptr<ElementData>& cdata = custom[0];
+					const auto& childs = ListFilter::Where<std::shared_ptr<ElementData>>(
+						customs, [&element](const std::shared_ptr<ElementData>& edata)->bool {
+							return edata->parent != nullptr && edata->parent->tag == element->tag;
+						});
+					for (const auto& child : childs) {
+						auto cdata = std::make_shared<ElementData>();
+						cdata->parent = eparent;
+						cdata->attributes = child->attributes;
+						cdata->tag = child->tag;
+						cdata->text = child->text;
+						elements.push_back(cdata);
+					}
+					continue;
+				}
 			}
 			if (!widget) continue;
 			map[element.get()] = widget;
