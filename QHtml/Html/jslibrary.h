@@ -21,6 +21,8 @@ namespace ysp::qt::html {
 	function _(selector) {
 		if (selector.charAt(0) === '#') {
 			return document.getElementById(selector.substring(1));
+		} else if(selector.charAt(0) === '.') {
+			return document.querySelector(selector);
 		}
 	}
 	)";

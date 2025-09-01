@@ -94,6 +94,8 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t ObjectAddEventListener(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementById(duk_context* ctx);
+		JS_API static duk_ret_t DocumentQuerySelector(duk_context* ctx);
+		JS_API static duk_ret_t DocumentQuerySelectorAll(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementByKey(duk_context* ctx);
 		JS_API static duk_ret_t Append(duk_context* ctx);
 		JS_API static duk_ret_t Remove(duk_context* ctx);

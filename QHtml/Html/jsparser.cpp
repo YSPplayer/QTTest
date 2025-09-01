@@ -88,6 +88,8 @@ namespace ysp::qt::html {
 		binder->bindMethod("getElementById", DocumentGetElementById, 1);
 		binder->bindMethod("getElementByKey", DocumentGetElementByKey, 1);
 		binder->bindMethod("createElement", CreateElement, 1);
+		binder->bindMethod("querySelector", DocumentQuerySelector, 1);
+		binder->bindMethod("querySelectorAll", DocumentQuerySelectorAll, 1);
 		binder->setGlobal("document");
 	}
 	void JsParser::PushJsValue(const std::shared_ptr<JsValue>& value) {
@@ -481,6 +483,85 @@ namespace ysp::qt::html {
 			duk_push_null(ctx);
 			return 1;
 		}
+	}
+	JS_API duk_ret_t JsParser::DocumentQuerySelector(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
+		const char* str = duk_require_string(ctx, 0);
+		const QString& classname = QString::fromUtf8(str);
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+		for (QString& str : classlist) {
+			str = str.trimmed();
+		}
+		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
+			const QString& cname = CWidget::GetClass(widget);
+			for (const auto& key : classlist) {
+				if (!cname.contains(key)) return false;
+			}
+			return true;
+			});
+		if (widegts.count() > 0 && widegts[0]) {
+			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
+			duk_get_global_string(ctx, globalKey.toUtf8().constData());
+			if (!duk_is_undefined(ctx, -1)) {
+				return 1;
+			}
+			else {
+				duk_pop(ctx);
+				duk_push_null(ctx);
+				return 1;
+			}
+		}
+		else {
+			duk_push_null(ctx);
+			return 1;
+		}
+	}
+	JS_API duk_ret_t JsParser::DocumentQuerySelectorAll(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
+		const char* str = duk_require_string(ctx, 0);
+		const QString& classname = QString::fromUtf8(str);
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+		for (QString& str : classlist) {
+			str = str.trimmed();
+		}
+		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
+			const QString& cname = CWidget::GetClass(widget);
+			for (const auto& key : classlist) {
+				if (!cname.contains(key)) return false;
+			}
+			return true;
+			});
+		duk_idx_t arr_idx = duk_push_array(ctx);
+		for (qint32 i = 0; i < widegts.count(); i++) {
+			QWidget* widget = widegts[i];
+			if (!widget) {
+				duk_push_null(ctx);
+				duk_put_prop_index(ctx, arr_idx, i);
+				continue;
+			}
+			const QString& globalKey = CWidget::GetKeyString(widget);
+			duk_get_global_string(ctx, globalKey.toUtf8().constData());
+			if (duk_is_undefined(ctx, -1)) {
+				duk_pop(ctx);
+				duk_push_null(ctx);
+			}
+			duk_put_prop_index(ctx, arr_idx, i);
+		}
+		duk_push_int(ctx, widegts.count());
+		duk_put_prop_string(ctx, arr_idx, "length");
+		return 1;
 	}
 	JS_API duk_ret_t JsParser::DocumentGetElementByKey(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
