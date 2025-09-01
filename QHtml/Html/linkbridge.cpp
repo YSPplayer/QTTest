@@ -43,7 +43,7 @@ namespace ysp::qt::html {
 				CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 			}
 			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"},
-				{"QProgressBar","progress"} };
+				{"QProgressBar","progress"},{"QComboBox","select"} };
 			void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 				JsClass* obj = new JsClass;
 				(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());

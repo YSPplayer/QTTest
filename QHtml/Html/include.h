@@ -6,3 +6,4 @@
 #include "cwidget.h"
 #include "cprogressbar.h"
 #include "clabel.h"
+#include "ccombobox.h"

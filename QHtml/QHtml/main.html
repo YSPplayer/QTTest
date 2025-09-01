@@ -1,46 +1,53 @@
 <html>
 <head>
     <style>
-        body {
-            width: 570px;
-            height: 360px;
-        }
+		body {
+			width: 570px;
+			height: 360px;
+		}
       .selectBox{
-        width: 120px;
+        width: 500px;
         height: 30px;
         background-color: rgb(91, 162, 190);
       }
       label {
         width: 80px;
         height: 30px;
+		left:0px;
+		top:0px;
         font-size: 9px;
         align-items: center;
-        background-color: red;
+        background-color: transparent;
       }
-      .selectBox2{
-        width: 50px;
-        height: 30px;
-        background-color: blue;
-        top: 0px;
-        right: 0px;
-      }
+	  select {
+		width: 100px;
+		height: 30px;
+		left:100px;
+		top:0px;
+	  }
     </style>
     <custom>
         <selectBox>
             <div class= 'selectBox'>
-                <label>实体名称:</label>
-                <div class= 'selectBox2'>asda</div>
+                <label class= 'selectBox2'>实体名称:</label>
+                <select></select>
             </div>
         </selectBox>
     </custom>
 </head>
 <body>
-    <selectBox>
-
+    <selectBox>	
     </selectBox>
     <script>
+		function setUpUi() {
+			const selectBox = document.querySelector('.selectBox2');
+			if(selectBox) {
+				const parent = selectBox.parentElement;
+				console.log(parent);
+			}
+		}
         window.addEventListener('load', function () {
-           console.log('gogogo');
+           setUpUi();
         });
     </script>
 </body>

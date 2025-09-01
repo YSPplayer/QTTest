@@ -6,8 +6,7 @@
 #include <QFile>
 #include "htmlreader.h"
 #include "listfilter.h"
-#include "cprogressbar.h"
-#include "clabel.h"
+#include "include.h"
 #include "jscompiler.h"
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
@@ -196,6 +195,9 @@ namespace ysp::qt::html {
 			else if (element->tag == "progress") {
 				widget = new CProgressBar;
 			}
+			else if (element->tag == "select") {
+				widget = new CComboBox;
+			}
 			else if (element->tag == "label") {
 				CLabel* label = new CLabel;
 				label->setText(element->text);
@@ -223,16 +225,12 @@ namespace ysp::qt::html {
 					while (!stack.empty()) {
 						const auto currentChilds = stack.top();
 						stack.pop();
-						for (const auto& child : currentChilds) {
-							auto cdata = std::make_shared<ElementData>();
-							cdata->parent = child->parent &&
+						for (auto& child : currentChilds) {
+							child->parent = child->parent &&
 								child->parent->tag == element->tag ? eparent :
 								child->parent;
-							if (cdata->parent) cdata->parent->childs.append(cdata);
-							cdata->attributes = child->attributes;
-							cdata->tag = child->tag;
-							cdata->text = child->text;
-							elements.push_back(cdata);
+							if (child->parent) child->parent->childs.append(cdata);
+							elements.push_back(child);
 							// 如果有子元素，压入栈
 							if (!child->childs.isEmpty()) {
 								stack.push(child->childs);
@@ -243,13 +241,21 @@ namespace ysp::qt::html {
 				}
 			}
 			if (!widget) continue;
-			map[element] = widget;
-			if (element->parent != nullptr && map.contains(element->parent)) {
-				widget->setParent(map[element->parent]);
+			if (element->parent != nullptr) {
+				bool success = false;
+				for (const auto& key : map.keys()) {
+					if (element->parent.get() == key.get()) {
+						widget->setParent(map[key]);
+						success = true;
+						break;
+					}
+				}
+				if(!success)widget->setParent(parent);
 			}
 			else {
 				widget->setParent(parent);
 			}
+			map[element] = widget;
 			LinkBridge::ParseAttributes(element.get(), widget);
 			LinkBridge::jsParser.CreateDocument(widget);
 		}

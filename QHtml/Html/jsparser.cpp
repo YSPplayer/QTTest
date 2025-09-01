@@ -5,9 +5,7 @@
 #include "jsparser.h"
 #include "linkbridge.h"
 #include "listfilter.h"
-#include "cwidget.h"
-#include "clabel.h"
-#include "cprogressbar.h"
+#include "include.h"
 #include <QFile>
 #include "jslibrary.h"
 namespace ysp::qt::html {
@@ -199,6 +197,7 @@ namespace ysp::qt::html {
 		//压入指针
 		duk_push_pointer(ctx, widget);
 		duk_put_prop_string(ctx, -2, K_PTRKEY);//参数二是绑定的对象，会弹出(消耗)栈顶的值
+		binder->bindAttributeMethod("parentElement", DUK_GETTER("parentElement"), nullptr);
 		binder->bindAttributeMethod("id", DUK_GETTER("id"), nullptr);
 		binder->bindAttributeMethod("width", DUK_GETTER("width"), DUK_SETTER("width"));
 		binder->bindAttributeMethod("height", DUK_GETTER("height"), DUK_SETTER("height"));
@@ -263,6 +262,15 @@ namespace ysp::qt::html {
 			}
 			else if (key == "disabled") {
 				duk_push_boolean(ctx, w->isEnabled());
+			}
+			else if (key == "parentElement") {
+				if (parent) {
+					duk_push_string(ctx, CWidget::GetKeyString(parent).toUtf8().constData());
+					return DocumentGetElementByKey(ctx);
+				}
+				else {
+					duk_push_null(ctx);
+				}
 			}
 			else if (classname == "QLabel") {
 				QLabel* qlabel = (QLabel*)w;
@@ -660,6 +668,7 @@ namespace ysp::qt::html {
 		if (classname == "div") widget = new CWidget();
 		else if (classname == "label") widget = new CLabel();
 		else if (classname == "progress") widget = new CProgressBar();
+		else if (classname == "select") widget = new CComboBox();
 		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
 		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);
