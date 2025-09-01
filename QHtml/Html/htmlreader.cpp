@@ -207,14 +207,11 @@ namespace ysp::qt::html {
 				custom[0]->tag: custom->xxxx
 				*/
 				std::shared_ptr<ElementData> eparent = element->parent;
-				qDebug() << element->tag;//selectBox
-				if (eparent) { qDebug() << eparent->tag; };
 				//自定义组件
 				const auto& custom = ListFilter::Where<std::shared_ptr<ElementData>>(
 					customs, [&element](const std::shared_ptr<ElementData>& edata)->bool {
 						return element->tag == edata->tag;
 					});
-				qDebug() << custom[0]->tag;//selectBox
 				if (custom.count() > 0) {
 					const std::shared_ptr<ElementData>& cdata = custom[0];
 					const auto& childs = ListFilter::Where<std::shared_ptr<ElementData>>(
@@ -242,14 +239,6 @@ namespace ysp::qt::html {
 							}
 						}
 					}
-					//for (const auto& child : childs) {
-					//	auto cdata = std::make_shared<ElementData>();
-					//	cdata->parent = eparent;
-					//	cdata->attributes = child->attributes;
-					//	cdata->tag = child->tag;
-					//	cdata->text = child->text;
-					//	elements.push_back(cdata);
-					//}
 					continue;
 				}
 			}
