@@ -6,7 +6,7 @@
 #include <QString>
 namespace ysp::qt::html {
 	const QString JS_LIBRARY_SCRIPT = R"(
-	function $(template) {
+	function r(template) {
 		var args = [];
 			for (var i = 1; i < arguments.length; i++) {
 				args.push(arguments[i]);
@@ -18,8 +18,10 @@ namespace ysp::qt::html {
 			return args[parseInt(index)] || '';
 		});
 		}
-	var _ = {
-		"#":function(id) {return document.getElementById(id);}
+	function _(selector) {
+		if (selector.charAt(0) === '#') {
+			return document.getElementById(selector.substring(1));
 		}
+	}
 	)";
 }
