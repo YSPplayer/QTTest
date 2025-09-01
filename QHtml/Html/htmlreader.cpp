@@ -53,7 +53,7 @@ namespace ysp::qt::html {
 	}
 
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
-		std::stack<ElementData*> elementStack;
+		std::stack<std::shared_ptr<ElementData>> elementStack;
 		bool hasjs = false;
 		QString jsscript = "";
 		while (!xml.atEnd() && !xml.hasError()) {
@@ -67,13 +67,14 @@ namespace ysp::qt::html {
 				else {
 					auto data = std::make_shared<ElementData>();
 					data->parent = elementStack.empty() ? nullptr : elementStack.top();
+					if (data->parent) data->parent->childs.append(data);
 					data->tag = xml.name().toString();
 					const QXmlStreamAttributes& attributes = xml.attributes();
 					for (const QXmlStreamAttribute& attr : attributes) {
 						data->attributes[attr.name().toString().toLower()] = attr.value().toString();
 					}
 					elements.append(data);
-					elementStack.push(data.get());
+					elementStack.push(data);
 				}
 			}
 			else if (token == QXmlStreamReader::Characters) {
@@ -112,20 +113,21 @@ namespace ysp::qt::html {
 
 	}
 	void HtmlReader::ParseCustomElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
-		std::stack<ElementData*> elementStack;
+		std::stack<std::shared_ptr<ElementData>> elementStack;
 		while (!xml.atEnd() && !xml.hasError()) {
 			QXmlStreamReader::TokenType token = xml.readNext();
 			if (token == QXmlStreamReader::StartElement) {
 				const QString& elementName = xml.name().toString().toLower();
 				auto data = std::make_shared<ElementData>();
 				data->parent = elementStack.empty() ? nullptr : elementStack.top();
+				if (data->parent) data->parent->childs.append(data);
 				data->tag = xml.name().toString();
 				const QXmlStreamAttributes& attributes = xml.attributes();
 				for (const QXmlStreamAttribute& attr : attributes) {
 					data->attributes[attr.name().toString().toLower()] = attr.value().toString();
 				}
 				elements.append(data);
-				elementStack.push(data.get());
+				elementStack.push(data);
 			}
 			else if (token == QXmlStreamReader::Characters) {
 				const QString& text = xml.text().toString().trimmed();
@@ -180,8 +182,8 @@ namespace ysp::qt::html {
 		return false;
 	}
 	CWidget* HtmlReader::ElementsToQWidegt(QList<std::shared_ptr<ElementData>>& elements,
-		 QList<std::shared_ptr<ElementData>>& customs) {
-		QMap<ElementData*, QWidget*> map;
+		QList<std::shared_ptr<ElementData>>& customs) {
+		QMap<std::shared_ptr<ElementData>, QWidget*> map;
 		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
 		//设置body样式
@@ -200,31 +202,59 @@ namespace ysp::qt::html {
 				widget = label;
 			}
 			else {
-				ElementData* eparent = element->parent;
+				/*
+				element->tag: custom->xxxx
+				custom[0]->tag: custom->xxxx
+				*/
+				std::shared_ptr<ElementData> eparent = element->parent;
+				qDebug() << element->tag;//selectBox
+				if (eparent) { qDebug() << eparent->tag; };
 				//自定义组件
 				const auto& custom = ListFilter::Where<std::shared_ptr<ElementData>>(
 					customs, [&element](const std::shared_ptr<ElementData>& edata)->bool {
 						return element->tag == edata->tag;
 					});
+				qDebug() << custom[0]->tag;//selectBox
 				if (custom.count() > 0) {
 					const std::shared_ptr<ElementData>& cdata = custom[0];
 					const auto& childs = ListFilter::Where<std::shared_ptr<ElementData>>(
 						customs, [&element](const std::shared_ptr<ElementData>& edata)->bool {
 							return edata->parent != nullptr && edata->parent->tag == element->tag;
 						});
-					for (const auto& child : childs) {
-						auto cdata = std::make_shared<ElementData>();
-						cdata->parent = eparent;
-						cdata->attributes = child->attributes;
-						cdata->tag = child->tag;
-						cdata->text = child->text;
-						elements.push_back(cdata);
+					std::stack<QList<std::shared_ptr<ElementData>>> stack;
+					stack.push(childs);
+					while (!stack.empty()) {
+						const auto currentChilds = stack.top();
+						stack.pop();
+						for (const auto& child : currentChilds) {
+							auto cdata = std::make_shared<ElementData>();
+							cdata->parent = child->parent &&
+								child->parent->tag == element->tag ? eparent :
+								child->parent;
+							if (cdata->parent) cdata->parent->childs.append(cdata);
+							cdata->attributes = child->attributes;
+							cdata->tag = child->tag;
+							cdata->text = child->text;
+							elements.push_back(cdata);
+							// 如果有子元素，压入栈
+							if (!child->childs.isEmpty()) {
+								stack.push(child->childs);
+							}
+						}
 					}
+					//for (const auto& child : childs) {
+					//	auto cdata = std::make_shared<ElementData>();
+					//	cdata->parent = eparent;
+					//	cdata->attributes = child->attributes;
+					//	cdata->tag = child->tag;
+					//	cdata->text = child->text;
+					//	elements.push_back(cdata);
+					//}
 					continue;
 				}
 			}
 			if (!widget) continue;
-			map[element.get()] = widget;
+			map[element] = widget;
 			if (element->parent != nullptr && map.contains(element->parent)) {
 				widget->setParent(map[element->parent]);
 			}

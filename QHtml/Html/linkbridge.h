@@ -16,7 +16,8 @@
 #include "cssparser.h"
 namespace ysp::qt::html {
 	struct ElementData {
-		ElementData* parent{ nullptr };
+		std::shared_ptr<ElementData> parent{ nullptr };
+		QList<std::shared_ptr<ElementData>> childs{ };
 		QString tag{ "" };
 		QMap<QString, QString> attributes{};
 		QString text{ "" };

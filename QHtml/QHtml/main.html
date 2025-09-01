@@ -1,94 +1,47 @@
 <html>
 <head>
-	<style>
-		body {
-			width: 500px;
-			height: 100px;
-		}
-		/* #dds {
-		width: 500px;
-		background-color:#38DAD8
-		}
-		div:hover {
-			background-color: rgb(172, 118, 118);
-		} */
-		#progress{
-			width: 500px;
-			height: 100px;
-			background-color: transparent;
-			top: 30px;
-			left: 100px;
-		}
-		/* #progressBar{
-			width: 100px;
-			height: 50px;
-			background-color: #8cd875;
-		} */
-		#progressBar {
-			width: 200px;
-			height: 10px;
-			background-color: #8cd875;
-			min:0;
-			max:100;
-			value:50;
-		}
-		label {
-			width: 30px;
-			height: 30px;
-			background-color: red;
-			text-align: center;
-			font-family: 'Microsoft YaHei';
-			font-size:12px;
-		}
-		#labelvalue {
-			right: 100px;
-			top: 10px;
-		}
-	</style>
+    <style>
+        body {
+            width: 570px;
+            height: 360px;
+        }
+      .selectBox{
+        width: 120px;
+        height: 30px;
+        background-color: rgb(91, 162, 190);
+      }
+      label {
+        width: 80px;
+        height: 30px;
+        font-size: 9px;
+        align-items: center;
+        background-color: red;
+      }
+      .selectBox2{
+        width: 50px;
+        height: 30px;
+        background-color: blue;
+        top: 0px;
+        right: 0px;
+      }
+    </style>
+    <custom>
+        <selectBox>
+            <div class= 'selectBox'>
+                <label>实体名称:</label>
+                <div class= 'selectBox2'>asda</div>
+            </div>
+        </selectBox>
+    </custom>
 </head>
 <body>
-	<div id="progress"> 
-		<label id="labelkey">cpu</label>
-		<progress id="progressBar"> </progress>
-		<label id="labelvalue">%50</label>
-		 <!-- <label id="progressBar">测试文本</label> -->
-	</div>
-	<!-- <div  id="dds" class="out2" style="width: 500px;height:600px ;border-radius:5px 10px 10px 0px;
-	background-color: blueviolet; " right ="50px" bottom ="0px">
-		<div id="dds2" class="out2" width="50px" height ="100px" left ="0px" top ="0px" 
-			 ondblclick="removeDiv3()"> </div>
-	</div> -->
-	<script>
-		window.addEventListener('load', function() {
-			const labelkey = _['#']('labelkey');
-			const progress = _['#']('progressBar');
-			progress.setStyleSheet(`
-			QProgressBar{
-			border: 2px solid #8f8f91;
-			border-radius: 5px;
-			 text-align: center;
-			  background-color: #f0f0f0;
-			   color: #333333;
-			   font-weight: bold;
-			}
-			   QProgressBar::chunk {
-			    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-				 stop:0 #4CAF50, stop:1 #45a049);
-				  border-radius: 3px;
-		}
-			`);
-			const labelvalue = _['#']('labelvalue');
-			labelkey.width = labelkey.textWidth;
-			progress.left = labelkey.leftEnd + 5;
-			progress.top = labelkey.top + labelkey.textHeight / 2;
-			labelvalue.width = labelvalue.textWidth;
-			console.log(progress.left);
-			console.log(progress.width);
-			console.log(progress.leftEnd);
-			labelvalue.left = progress.leftEnd + 5;
-			labelvalue.top = labelkey.top;
-			// const progressBar = _#('progressBar');
-		});
-	</script>
+    <selectBox>
+
+    </selectBox>
+    <script>
+        window.addEventListener('load', function () {
+           console.log('gogogo');
+        });
+    </script>
 </body>
 </html>
