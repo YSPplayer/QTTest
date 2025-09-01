@@ -3,6 +3,7 @@
 	2025.8.30
 */
 #include "jscompiler.h"
+#include <QRegularExpression>
 namespace ysp::qt::html {
 	QString JsCompiler::ToCompilerScript(const QString& script, bool html) {
 		QString result = script;
@@ -46,6 +47,8 @@ namespace ysp::qt::html {
 				templateContent.replace("\n", "' + '");
 				templateContent.replace("\r", "' + '");
 				templateContent.replace("\t", "' + '");
+				QRegularExpression regex("' \\+ '\\s+");
+				templateContent.replace(regex, "' + '\\n");
 				// 替换为字符串连接形式
 				QString normalString = "'" + templateContent + "'";
 				result.replace(start, end - start + 1, normalString);
