@@ -198,7 +198,9 @@ namespace ysp::qt::html {
 		duk_push_pointer(ctx, widget);
 		duk_put_prop_string(ctx, -2, K_PTRKEY);//参数二是绑定的对象，会弹出(消耗)栈顶的值
 		binder->bindAttributeMethod("parentElement", DUK_GETTER("parentElement"), nullptr);
+		binder->bindAttributeMethod("children", DUK_GETTER("children"), nullptr);
 		binder->bindAttributeMethod("id", DUK_GETTER("id"), nullptr);
+		binder->bindAttributeMethod("tagName", DUK_GETTER("tagName"), nullptr);
 		binder->bindAttributeMethod("width", DUK_GETTER("width"), DUK_SETTER("width"));
 		binder->bindAttributeMethod("height", DUK_GETTER("height"), DUK_SETTER("height"));
 		binder->bindAttributeMethod("min", DUK_GETTER("min"), DUK_SETTER("min"));
@@ -242,6 +244,7 @@ namespace ysp::qt::html {
 			QString classname = w->metaObject()->className();
 			QString key(name);
 			if (key == "id") duk_push_string(ctx, CWidget::GetJsId(w).toUtf8().constData());
+			else if (key == "tagName") duk_push_string(ctx, LinkBridge::QClassToHtmlClass(classname).toUpper().toUtf8().constData());
 			else if (key == "width") duk_push_int(ctx, w->width());
 			else if (key == "height") duk_push_int(ctx, w->height());
 			else if (key == "top") duk_push_int(ctx, w->y());
@@ -271,6 +274,24 @@ namespace ysp::qt::html {
 				else {
 					duk_push_null(ctx);
 				}
+			}
+			else if (key == "children") {
+				duk_idx_t arr_idx = duk_push_array(ctx);
+				qint32 arr_index = 0;
+				for (QWidget* child : w->findChildren<QWidget*>()) {
+					if (!child) continue;
+					duk_push_string(ctx, CWidget::GetKeyString(child).toUtf8().constData());
+					DocumentGetElementByKey(ctx);
+					if (!duk_is_null(ctx, -1)) {
+						duk_put_prop_index(ctx, arr_idx, arr_index);
+						++arr_index;
+					}
+					else {
+						duk_pop(ctx);
+					}
+					duk_pop(ctx); //清理字符串，不会自动清理
+				}
+				ExpandArray(ctx, arr_idx,arr_index);
 			}
 			else if (classname == "QLabel") {
 				QLabel* qlabel = (QLabel*)w;
@@ -385,6 +406,60 @@ namespace ysp::qt::html {
 				bar->setValue(v);
 			}
 		}
+		return 0;
+	}
+	void JsParser::ExpandArray(duk_context* ctx,qint32 position, qint32 length) {
+		duk_push_int(ctx, length);
+		duk_put_prop_string(ctx, position, "length");
+		duk_push_c_function(ctx, ArrayForEach, 1);
+		duk_put_prop_string(ctx, position, "forEach");
+	}
+
+	JS_API duk_ret_t JsParser::ArrayForEach(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "The number of parameters(1) is incorrect");
+		}
+		if (!duk_is_function(ctx, 0)) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "parameter is not function.");
+		}
+		duk_push_this(ctx);
+		if (!duk_is_array(ctx, -1)) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "forEach must be called on an array");
+		}
+		// 获取数组长度
+		duk_size_t length = duk_get_length(ctx, -1);
+		// 遍历数组
+		for (duk_size_t i = 0; i < length; i++) {
+			// 获取数组元素
+			duk_get_prop_index(ctx, -1, i);
+			// 准备回调函数参数：[callback, element, index, array]
+			duk_dup(ctx, 0);        // 复制回调函数
+			duk_dup(ctx, -2);       // 复制元素值
+			duk_push_int(ctx, i);   // 索引
+			duk_dup(ctx, -4);       // 复制数组对象
+			// 检查并添加length属性（如果不存在）
+			duk_get_prop_string(ctx, -1, "length");
+			if (duk_is_undefined(ctx, -1)) {
+				duk_pop(ctx); // 清理undefined
+				ExpandArray(ctx, -2, length);
+
+			}
+			else {
+				duk_pop(ctx); // 清理已存在的length值
+			}
+			// 调用回调函数
+			if (duk_pcall(ctx, 3) != DUK_EXEC_SUCCESS) {
+				// 回调函数执行出错
+				duk_pop(ctx); // 清理元素值
+				return ThrowError(ctx, DUK_RET_ERROR, duk_safe_to_string(ctx, -1));
+			}
+			// 清理回调函数返回值
+			duk_pop(ctx);
+			// 清理元素值
+			duk_pop(ctx);
+		}
+		// 清理this对象
+		duk_pop(ctx);
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::Delete(duk_context* ctx) {
@@ -567,16 +642,15 @@ namespace ysp::qt::html {
 			}
 			duk_put_prop_index(ctx, arr_idx, i);
 		}
-		duk_push_int(ctx, widegts.count());
-		duk_put_prop_string(ctx, arr_idx, "length");
+		ExpandArray(ctx, arr_idx, widegts.count());
 		return 1;
 	}
 	JS_API duk_ret_t JsParser::DocumentGetElementByKey(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"The number of parameters(1) is incorrect");
-		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+		if (!duk_is_string(ctx, -1)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"parameter is not string.");
-		const char* key = duk_require_string(ctx, 0);
+		const char* key = duk_require_string(ctx, -1);
 		duk_get_global_string(ctx, key);
 		if (!duk_is_undefined(ctx, -1)) {
 			return 1;

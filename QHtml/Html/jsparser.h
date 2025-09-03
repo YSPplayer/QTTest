@@ -89,6 +89,8 @@ namespace ysp::qt::html {
 		static QWidget* ThisWidget(duk_context* ctx);
 		static duk_ret_t GetValue(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
+		static void ExpandArray(duk_context* ctx,qint32 position,qint32 length);
+		JS_API static duk_ret_t ArrayForEach(duk_context* ctx);
 		JS_API static duk_ret_t Delete(duk_context* ctx);
 		JS_API static duk_ret_t ConsoleLog(duk_context* ctx);
 		JS_API static duk_ret_t WindowAddEventListener(duk_context* ctx);
