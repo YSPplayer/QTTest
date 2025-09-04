@@ -302,6 +302,8 @@ namespace ysp::qt::html {
 				if (key == "options") {
 					duk_idx_t arr_idx = duk_push_array(ctx);
 					qint32 arr_index = 0;
+					duk_push_pointer(ctx, w);
+					duk_put_prop_string(ctx, -2, K_PTRKEY);
 					for (qint32 i = 0; i < qcomboBox->count(); ++i) {
 						duk_push_int(ctx, i);
 						duk_ret_t result = CreateOption(ctx);
@@ -315,6 +317,8 @@ namespace ysp::qt::html {
 						duk_pop(ctx); //清理压入的i，不会自动清理
 					}
 					ExpandArray(ctx, arr_idx, arr_index);
+					duk_push_c_function(ctx, AddOption, DUK_VARARGS);
+					duk_put_prop_string(ctx, arr_idx, "addOption");
 					return 1;
 				}
 			}
@@ -569,6 +573,45 @@ namespace ysp::qt::html {
 		}
 		// 清理this对象
 		duk_pop(ctx);
+		return 0;
+	}
+	JS_API duk_ret_t JsParser::AddOption(duk_context* ctx) {
+		duk_ret_t topcount = duk_get_top(ctx);
+		if (topcount < 1) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "The number of parameters(1) is incorrect");
+		}
+		if (!duk_is_string(ctx, -1)) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "parameter is not string.");
+		}
+		QString value = "";
+		QString text = "";
+		if (topcount == 2) {
+			if (!duk_is_string(ctx, -2)) {
+				return ThrowError(ctx, DUK_RET_TYPE_ERROR, "parameter is not string.");
+			}
+			value = QString::fromUtf8(duk_require_string(ctx, -1));
+			text = QString::fromUtf8(duk_require_string(ctx, -2));
+		}
+		else if (topcount == 1) {
+			text = QString::fromUtf8(duk_require_string(ctx, -1));
+		}
+		else {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR, "Too many parameters. Expected 1 or 2.");
+		}
+		duk_idx_t initial_stack_size = duk_get_top(ctx);
+		duk_push_this(ctx);
+		if (!duk_get_prop_string(ctx, -1, K_PTRKEY)) {
+			duk_set_top(ctx, initial_stack_size);
+			return 0;
+		}
+		QWidget* w = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+		duk_set_top(ctx, initial_stack_size);
+		QString classname = QString::fromUtf8(w->metaObject()->className());
+		if (w && classname == "QComboBox") {
+			QComboBox* comboBox = (QComboBox*)w;
+			comboBox->addItem(text, value);
+		}
+		//更新数组大小
 		return 0;
 	}
 	JS_API duk_ret_t JsParser::Delete(duk_context* ctx) {

@@ -50,14 +50,16 @@
         const offset = 10;
         sselect.left = slabel.left + slabel.textWidth + offset;
         const options = sselect.options;
+        options.addOption('新世界');
         console.log(options);
         console.log(options.length);
         options.forEach(function(option) {
           console.log(option.value,option.text);
-          option.value = 'test';
-          option.text = '文本';
+          // option.value = 'test';
+          // option.text = '文本';
           // sselect.appendChild(optionElement);
         });
+
 			}
 		}
         window.addEventListener('load', function () {
