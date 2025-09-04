@@ -199,6 +199,7 @@ namespace ysp::qt::html {
 		duk_put_prop_string(ctx, -2, K_PTRKEY);//参数二是绑定的对象，会弹出(消耗)栈顶的值
 		binder->bindAttributeMethod("parentElement", DUK_GETTER("parentElement"), nullptr);
 		binder->bindAttributeMethod("children", DUK_GETTER("children"), nullptr);
+		binder->bindAttributeMethod("options", DUK_GETTER("options"), nullptr);
 		binder->bindAttributeMethod("id", DUK_GETTER("id"), nullptr);
 		binder->bindAttributeMethod("tagName", DUK_GETTER("tagName"), nullptr);
 		binder->bindAttributeMethod("width", DUK_GETTER("width"), DUK_SETTER("width"));
@@ -218,6 +219,9 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("disabled", DUK_GETTER("disabled"), DUK_SETTER("disabled"));
 		binder->bindMethod("addEventListener", ObjectAddEventListener, 2);
 		binder->bindMethod("setStyleSheet", SetStyleSheet, 1);
+		binder->bindMethod("querySelector", QuerySelector, 1);
+		binder->bindMethod("_", QuerySelector, 1); //语法糖
+		binder->bindMethod("querySelectorAll", QuerySelectorAll, 1);
 		binder->bindMethod("append", Append, 1);
 		binder->bindMethod("remove", Remove, 1);
 		binder->bindMethod("delete", Delete, 0);
@@ -242,7 +246,7 @@ namespace ysp::qt::html {
 		if (auto* w = ThisWidget(ctx)) {
 			QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
 			QString classname = w->metaObject()->className();
-			QString key(name);
+			QString key = QString::fromUtf8(name);
 			if (key == "id") duk_push_string(ctx, CWidget::GetJsId(w).toUtf8().constData());
 			else if (key == "tagName") duk_push_string(ctx, LinkBridge::QClassToHtmlClass(classname).toUpper().toUtf8().constData());
 			else if (key == "width") duk_push_int(ctx, w->width());
@@ -291,7 +295,28 @@ namespace ysp::qt::html {
 					}
 					duk_pop(ctx); //清理字符串，不会自动清理
 				}
-				ExpandArray(ctx, arr_idx,arr_index);
+				ExpandArray(ctx, arr_idx, arr_index);
+			}
+			else if (classname == "QComboBox") {
+				QComboBox* qcomboBox = (QComboBox*)w;
+				if (key == "options") {
+					duk_idx_t arr_idx = duk_push_array(ctx);
+					qint32 arr_index = 0;
+					for (qint32 i = 0; i < qcomboBox->count(); ++i) {
+						duk_push_int(ctx, i);
+						duk_ret_t result = CreateOption(ctx);
+						if (!duk_is_undefined(ctx, -1)) {
+							duk_put_prop_index(ctx, arr_idx, arr_index);
+							++arr_index;
+						}
+						else {
+							duk_pop(ctx);
+						}
+						duk_pop(ctx); //清理压入的i，不会自动清理
+					}
+					ExpandArray(ctx, arr_idx, arr_index);
+					return 1;
+				}
 			}
 			else if (classname == "QLabel") {
 				QLabel* qlabel = (QLabel*)w;
@@ -327,12 +352,96 @@ namespace ysp::qt::html {
 		duk_push_undefined(ctx);
 		return 1;
 	}
+	duk_ret_t JsParser::GetOption(duk_context* ctx, const char* name) {
+		duk_idx_t initial_stack_size = duk_get_top(ctx);
+		duk_push_this(ctx);
+		if (!duk_get_prop_string(ctx, -1, K_PTRKEY)) { //不存在这个键 返回
+			duk_set_top(ctx, initial_stack_size);
+			duk_push_undefined(ctx);
+			return 1;
+		}
+		QWidget* w = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+		duk_pop(ctx);
+		if (!duk_get_prop_string(ctx, -1, "INDEX")) {
+			duk_set_top(ctx, initial_stack_size);
+			duk_push_undefined(ctx);
+			return 1;
+		}
+		qint32 v = duk_get_number(ctx, -1);
+		QString key = QString::fromUtf8(name);
+		QString classname = QString::fromUtf8(w->metaObject()->className());
+		duk_pop_2(ctx);
+
+		if (w && classname == "QComboBox") {
+			QComboBox* comboBox = (QComboBox*)w;
+			if (v >= 0 && v < comboBox->count()) {
+				if (key == "text") {
+					duk_push_string(ctx, comboBox->itemText(v).toUtf8().constData());
+				}
+				else if (key == "value") {
+					QVariant data = comboBox->itemData(v);
+					if (data.isValid()) {
+						duk_push_string(ctx, data.toString().toUtf8().constData());
+					}
+					else {
+						duk_push_string(ctx, "");
+					}
+				}
+				else {
+					duk_push_undefined(ctx);
+				}
+			}
+			else {
+				duk_push_undefined(ctx);
+			}
+		}
+		else {
+			duk_push_undefined(ctx);
+		}
+		return 1;
+	}
+	duk_ret_t JsParser::SetOption(duk_context* ctx, const char* name) {
+		duk_idx_t initial_stack_size = duk_get_top(ctx);
+		duk_push_this(ctx);
+		if (!duk_get_prop_string(ctx, -1, K_PTRKEY)) {
+			duk_set_top(ctx, initial_stack_size);
+			return 0;
+		}
+		QWidget* w = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+		duk_pop(ctx);
+		if (!duk_get_prop_string(ctx, -1, "INDEX")) {
+			duk_set_top(ctx, initial_stack_size);
+			return 0;
+		}
+		qint32 v = duk_get_number(ctx, -1);
+		QString key = QString::fromUtf8(name);
+		QString classname = QString::fromUtf8(w->metaObject()->className());
+		duk_pop_2(ctx);
+		if (w && classname == "QComboBox") {
+			QComboBox* comboBox = (QComboBox*)w;
+			if (v >= 0 && v < comboBox->count()) {
+				if (key == "text") {
+					if (!duk_is_string(ctx, -1))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+						"parameter is not string.");
+					comboBox->setItemText(v, QString::fromUtf8(duk_require_string(ctx, -1)));
+				}
+				else if (key == "value") {
+					if (!duk_is_string(ctx, -1))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+						"parameter is not string.");
+					const char* str = duk_require_string(ctx, -1);
+					comboBox->setItemData(v,
+						QString::fromUtf8(str).isEmpty() ? QVariant() : QVariant(str));
+				}
+			}
+		}
+		return 0;
+	}
 	duk_ret_t JsParser::SetValue(duk_context* ctx, const char* name) {
 		QWidget* w = ThisWidget(ctx);
 		if (!w) return 0;
 		QString classname = w->metaObject()->className();
 		QWidget* parent = w->parentWidget() ? w->parentWidget() : nullptr;
-		const QString key(name);
+		QString key = QString::fromUtf8(name);
 
 		if (key == "width") {
 			if (!duk_is_number(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
@@ -408,7 +517,7 @@ namespace ysp::qt::html {
 		}
 		return 0;
 	}
-	void JsParser::ExpandArray(duk_context* ctx,qint32 position, qint32 length) {
+	void JsParser::ExpandArray(duk_context* ctx, qint32 position, qint32 length) {
 		duk_push_int(ctx, length);
 		duk_put_prop_string(ctx, position, "length");
 		duk_push_c_function(ctx, ArrayForEach, 1);
@@ -573,21 +682,32 @@ namespace ysp::qt::html {
 		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 			"parameter is not string.");
 		const char* str = duk_require_string(ctx, 0);
-		const QString& classname = QString::fromUtf8(str);
+		const QString& classname = QString::fromUtf8(str).trimmed();
 		duk_get_global_string(ctx, JSPARSER);
 		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
 		duk_pop(ctx);
-		QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
-		for (QString& str : classlist) {
-			str = str.trimmed();
-		}
-		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
-			const QString& cname = CWidget::GetClass(widget);
-			for (const auto& key : classlist) {
-				if (!cname.contains(key)) return false;
+		QList<QWidget*> widegts;
+		if (classname.startsWith(".")) { //类名
+			QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+			for (QString& str : classlist) {
+				str = str.trimmed();
 			}
-			return true;
-			});
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClass(widget);
+				for (const auto& key : classlist) {
+					if (!cname.contains(key)) return false;
+				}
+				return true;
+				});
+		}
+		else { //标签
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [classname](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClassName(widget);
+				if (LinkBridge::QClassToHtmlClass(cname) == classname) {
+					return true;
+				}
+				});
+		}
 		if (widegts.count() > 0 && widegts[0]) {
 			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
 			duk_get_global_string(ctx, globalKey.toUtf8().constData());
@@ -615,17 +735,28 @@ namespace ysp::qt::html {
 		duk_get_global_string(ctx, JSPARSER);
 		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
 		duk_pop(ctx);
-		QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
-		for (QString& str : classlist) {
-			str = str.trimmed();
-		}
-		QList<QWidget*> widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
-			const QString& cname = CWidget::GetClass(widget);
-			for (const auto& key : classlist) {
-				if (!cname.contains(key)) return false;
+		QList<QWidget*> widegts;
+		if (classname.startsWith(".")) { //类名
+			QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+			for (QString& str : classlist) {
+				str = str.trimmed();
 			}
-			return true;
-			});
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [classlist](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClass(widget);
+				for (const auto& key : classlist) {
+					if (!cname.contains(key)) return false;
+				}
+				return true;
+				});
+		}
+		else { //标签
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [classname](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClassName(widget);
+				if (LinkBridge::QClassToHtmlClass(cname) == classname) {
+					return true;
+				}
+				});
+		}
 		duk_idx_t arr_idx = duk_push_array(ctx);
 		for (qint32 i = 0; i < widegts.count(); i++) {
 			QWidget* widget = widegts[i];
@@ -691,6 +822,118 @@ namespace ysp::qt::html {
 				"object is undefined.");
 		}
 		return 0;
+	}
+	JS_API duk_ret_t JsParser::QuerySelector(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
+		QWidget* w = ThisWidget(ctx);
+		if (!w) {
+			duk_pop(ctx);
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"C++ object is null.");
+		}
+		const char* str = duk_require_string(ctx, 0);
+		const QString& classname = QString::fromUtf8(str).trimmed();
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		QList<QWidget*> widegts;
+		if (classname.startsWith(".")) { //类名
+			QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+			for (QString& str : classlist) {
+				str = str.trimmed();
+			}
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [w, classlist](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClass(widget);
+				for (const auto& key : classlist) {
+					if (!cname.contains(key) || widget->parent() != w) return false;
+				}
+				return true;
+				});
+		}
+		else { //标签
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [w, classname](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClassName(widget);
+				if (widget->parent() == w && LinkBridge::QClassToHtmlClass(cname) == classname) {
+					return true;
+				}
+				});
+		}
+		if (widegts.count() > 0 && widegts[0]) {
+			const QString& globalKey = CWidget::GetKeyString(widegts[0]);
+			duk_get_global_string(ctx, globalKey.toUtf8().constData());
+			if (!duk_is_undefined(ctx, -1)) {
+				return 1;
+			}
+			else {
+				duk_pop(ctx);
+				duk_push_null(ctx);
+				return 1;
+			}
+		}
+		else {
+			duk_push_null(ctx);
+			return 1;
+		}
+	}
+	JS_API duk_ret_t JsParser::QuerySelectorAll(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not string.");
+		QWidget* w = ThisWidget(ctx);
+		if (!w) {
+			duk_pop(ctx);
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"C++ object is null.");
+		}
+		const char* str = duk_require_string(ctx, 0);
+		const QString& classname = QString::fromUtf8(str).trimmed();
+		duk_get_global_string(ctx, JSPARSER);
+		JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		QList<QWidget*> widegts;
+		if (classname.startsWith(".")) { //类名
+			QList<QString> classlist = classname.split(".", Qt::SkipEmptyParts);
+			for (QString& str : classlist) {
+				str = str.trimmed();
+			}
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [w, classlist](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClass(widget);
+				for (const auto& key : classlist) {
+					if (!cname.contains(key) || widget->parent() != w) return false;
+				}
+				return true;
+				});
+		}
+		else { //标签
+			widegts = ListFilter::Where<QWidget*>(ptr->objects, [w, classname](QWidget* widget)->bool {
+				const QString& cname = CWidget::GetClassName(widget);
+				if (widget->parent() == w && LinkBridge::QClassToHtmlClass(cname) == classname) {
+					return true;
+				}
+				});
+		}
+		duk_idx_t arr_idx = duk_push_array(ctx);
+		for (qint32 i = 0; i < widegts.count(); i++) {
+			QWidget* widget = widegts[i];
+			if (!widget) {
+				duk_push_null(ctx);
+				duk_put_prop_index(ctx, arr_idx, i);
+				continue;
+			}
+			const QString& globalKey = CWidget::GetKeyString(widget);
+			duk_get_global_string(ctx, globalKey.toUtf8().constData());
+			if (duk_is_undefined(ctx, -1)) {
+				duk_pop(ctx);
+				duk_push_null(ctx);
+			}
+			duk_put_prop_index(ctx, arr_idx, i);
+		}
+		ExpandArray(ctx, arr_idx, widegts.count());
+		return 1;
 	}
 	JS_API duk_ret_t JsParser::Remove(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
@@ -771,6 +1014,43 @@ namespace ysp::qt::html {
 		/*auto style = LinkBridge::ReplaceAfterHash(stylesheet, CWidget::GetId(w));*/
 		w->setStyleSheet(stylesheet);
 		return 0;
+	}
+
+	/// <summary>
+	/// combox的option
+	/// </summary>
+	JS_API duk_ret_t JsParser::CreateOption(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"The number of parameters(1) is incorrect");
+		if (!duk_is_number(ctx, -1)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"parameter is not number.");
+		const qint32 v = duk_require_int(ctx, -1);
+		if (auto* w = ThisWidget(ctx)) {
+			QComboBox* combox = (QComboBox*)w;
+			duk_get_global_string(ctx, JSPARSER);
+			JsParser* ptr = (JsParser*)duk_get_pointer(ctx, -1);
+			duk_pop(ctx);
+			duk_push_object(ctx);
+			duk_push_pointer(ctx, w);
+			duk_put_prop_string(ctx, -2, K_PTRKEY);
+			duk_push_number(ctx, v);
+			duk_put_prop_string(ctx, -2, "INDEX");
+			ptr->binder->bindAttributeMethod("value", [](duk_context* ctx)->duk_ret_t {
+				return GetOption(ctx, "value");
+				}, [](duk_context* ctx)->duk_ret_t {
+					return SetOption(ctx, "value");
+					});
+				ptr->binder->bindAttributeMethod("text", [](duk_context* ctx)->duk_ret_t {
+					return GetOption(ctx, "text");
+					}, [](duk_context* ctx)->duk_ret_t {
+						return SetOption(ctx, "text");
+						});
+
+		}
+		else {
+			duk_push_undefined(ctx);
+		}
+		return 1;
 	}
 	void JSBinder::beginObject() {
 		duk_push_object(ctx);

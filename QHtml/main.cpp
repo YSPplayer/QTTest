@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 	QApplication app(argc, argv);
 	/*  QHtml window;
 	  window.show();*/
-	HtmlReader* r = new HtmlReader( "E:/QTtest/QTTest/QHtml/QHtml/main.html");
+	HtmlReader* r = new HtmlReader(QApplication::applicationDirPath() + "/main.html");
 	CWidget* widget = r->Parse();
 	for (QWidget* w : widget->findChildren<QWidget*>()) {
 		qDebug() << w->geometry();

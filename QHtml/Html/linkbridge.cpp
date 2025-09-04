@@ -326,6 +326,14 @@ namespace ysp::qt::html {
 			QString LinkBridge::QClassToHtmlClass(const QString& name) {
 				return classmap.contains(name) ? classmap[name] : "";
 			}
+			QString LinkBridge::HtmlClassToQClass(const QString& name) {
+				for (auto it = classmap.begin(); it != classmap.end(); ++it) {
+					if (it.value() == name) {
+						return it.key();
+					}
+				}
+				return QString("");
+			}
 			QString LinkBridge::ReplaceAfterHash(QString input, const QString& replacement) {
 				qint32 hashPos = input.indexOf('#');
 				if (hashPos == -1) return input;

@@ -44,6 +44,7 @@ namespace ysp::qt::html {
 		static void ParseKey(const QString& key, QWidget* widget, StyleBuilder& builder, QMap<QString, QString>& attributes);
 		static QString ExtractFuncString(const QString& input);
 		static QString QClassToHtmlClass(const QString& name);
+		static QString HtmlClassToQClass(const QString& name);
 		static QString ReplaceAfterHash(QString input, const QString& replacement);
 		static QString RemoveStrPrefix(const QString& key, const QString& eventName);
 		static QString ToNumberString(const QString& key);

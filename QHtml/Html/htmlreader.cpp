@@ -189,6 +189,7 @@ namespace ysp::qt::html {
 		LinkBridge::ParseAttributesBody(parent);
 		for (qint32 i = 0; i < elements.size(); ++i) {
 			auto& element = elements[i];
+			qDebug() << element->tag;
 			if (!element.get()) continue;
 			QWidget* widget = nullptr;
 			if (element->tag == "div") widget = new CWidget;
@@ -202,6 +203,15 @@ namespace ysp::qt::html {
 				CLabel* label = new CLabel;
 				label->setText(element->text);
 				widget = label;
+			}
+			else if (element->tag == "option") {
+				if (element->parent == nullptr || element->parent->tag != "select") {
+					continue;
+				}
+				QComboBox* combox = (QComboBox*)map[element->parent];
+				QMap<QString, QString>& attributes = element->attributes;
+				combox->addItem(element->text, element->attributes.value("value", ""));
+				continue;
 			}
 			else {
 				/*
@@ -226,10 +236,11 @@ namespace ysp::qt::html {
 						const auto currentChilds = stack.top();
 						stack.pop();
 						for (auto& child : currentChilds) {
-							child->parent = child->parent &&
-								child->parent->tag == element->tag ? eparent :
-								child->parent;
-							if (child->parent) child->parent->childs.append(cdata);
+							if (child->parent) {
+								const QString key = LinkBridge::HtmlClassToQClass(child->parent->tag);
+								if (key == "") child->parent = eparent;
+								//child->parent->childs.append(cdata);
+							}
 							elements.push_back(child);
 							// 如果有子元素，压入栈
 							if (!child->childs.isEmpty()) {
@@ -250,7 +261,7 @@ namespace ysp::qt::html {
 						break;
 					}
 				}
-				if(!success)widget->setParent(parent);
+				if (!success)widget->setParent(parent);
 			}
 			else {
 				widget->setParent(parent);

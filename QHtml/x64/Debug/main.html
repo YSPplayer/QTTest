@@ -1,0 +1,68 @@
+<html>
+<head>
+    <style>
+		body {
+			width: 570px;
+			height: 360px;
+		}
+    .selectBox{
+      width: 500px;
+      height: 30px;
+      background-color: rgb(91, 162, 190);
+    }
+    label {
+      width: 80px;
+      height: 30px;
+      left:0px;
+      top:0px;
+      font-size: 9px;
+      align-items: center;
+      background-color: transparent;
+    }
+  select {
+		width: 100px;
+		height: 30px;
+		left:100px;
+		top:0px;
+	  }
+    </style>
+    <custom>
+        <selectBox>
+            <div class= 'selectBox'>
+                <label class= 'selectBox2'>实体名称:</label>
+                <select>
+                  <option value="red">红色</option>
+                  <option value="blue">蓝色</option>
+                </select>
+            </div>
+        </selectBox>
+    </custom>
+</head>
+<body>
+    <selectBox>	
+    </selectBox>
+    <script>
+		function setUpUi() {
+			const selectBox = document.querySelector('.selectBox');
+			if(selectBox) {
+				const slabel = selectBox._('label');
+				const sselect = selectBox._('select');
+        const offset = 10;
+        sselect.left = slabel.left + slabel.textWidth + offset;
+        const options = sselect.options;
+        console.log(options);
+        console.log(options.length);
+        options.forEach(function(option) {
+          console.log(option.value,option.text);
+          option.value = 'test';
+          option.text = '文本';
+          // sselect.appendChild(optionElement);
+        });
+			}
+		}
+        window.addEventListener('load', function () {
+           setUpUi();
+        });
+    </script>
+</body>
+</html>

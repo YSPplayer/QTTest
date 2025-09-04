@@ -88,8 +88,10 @@ namespace ysp::qt::html {
 		static duk_ret_t ThrowError(duk_context* ctx, duk_ret_t code, const QString& error);
 		static QWidget* ThisWidget(duk_context* ctx);
 		static duk_ret_t GetValue(duk_context* ctx, const char* name);
+		static duk_ret_t GetOption(duk_context* ctx, const char* name);
+		static duk_ret_t SetOption(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
-		static void ExpandArray(duk_context* ctx,qint32 position,qint32 length);
+		static void ExpandArray(duk_context* ctx, qint32 position, qint32 length);
 		JS_API static duk_ret_t ArrayForEach(duk_context* ctx);
 		JS_API static duk_ret_t Delete(duk_context* ctx);
 		JS_API static duk_ret_t ConsoleLog(duk_context* ctx);
@@ -100,9 +102,12 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t DocumentQuerySelectorAll(duk_context* ctx);
 		JS_API static duk_ret_t DocumentGetElementByKey(duk_context* ctx);
 		JS_API static duk_ret_t Append(duk_context* ctx);
+		JS_API static duk_ret_t QuerySelector(duk_context* ctx);
+		JS_API static duk_ret_t QuerySelectorAll(duk_context* ctx);
 		JS_API static duk_ret_t Remove(duk_context* ctx);
 		JS_API static duk_ret_t CreateElement(duk_context* ctx);
 		JS_API static duk_ret_t SetStyleSheet(duk_context* ctx);
+		JS_API static duk_ret_t CreateOption(duk_context* ctx);
 		//func//
 	};
 }
