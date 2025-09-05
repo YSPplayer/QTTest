@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 		qDebug() << w->metaObject()->className();
 	}
 	CWidget::ShowConsoleWindow(true);
-
-	widget->show();
+	r->Clear();
+	if (widget) widget->show();
 	return app.exec();
 }

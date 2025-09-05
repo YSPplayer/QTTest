@@ -19,12 +19,14 @@ namespace ysp::qt::html {
 	public:
 		HtmlReader(const QString& filePath);
 		CWidget* Parse();
+		void Clear();
 	private:
 		static void ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements);
 		static void ParseCustomElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements);
 		static void ParseStyleElement(QXmlStreamReader& xml, CSSParser& parser, QList<CSSRule*>& rules);
+		QList<CSSRule*> cssrules;
 		QString html;
-		QList<std::shared_ptr<ElementData>> elementDatas;
+		CWidget* rootwidget;
 		static CWidget* ElementsToQWidegt(QList<std::shared_ptr<ElementData>>& elements,
 			QList<std::shared_ptr<ElementData>>& customs);
 		static bool ContainsKey(QMap<QString, QString>& map, const QString& key);

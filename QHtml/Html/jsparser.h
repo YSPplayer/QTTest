@@ -84,6 +84,9 @@ namespace ysp::qt::html {
 		void PushJsValue(const std::shared_ptr<JsValue>& value);
 		void PushJsObject(const JsClass* obj);
 		void PushJsArray(const JsArray* arr);
+		static void PushJsValue(duk_context* ctx, const std::shared_ptr<JsValue>& value);
+		static void PushJsObject(duk_context* ctx, const JsClass* obj);
+		static void PushJsArray(duk_context* ctx, const JsArray* arr);
 		//func//
 		static duk_ret_t ThrowError(duk_context* ctx, duk_ret_t code, const QString& error);
 		static QWidget* ThisWidget(duk_context* ctx);
@@ -106,6 +109,7 @@ namespace ysp::qt::html {
 		JS_API static duk_ret_t QuerySelector(duk_context* ctx);
 		JS_API static duk_ret_t QuerySelectorAll(duk_context* ctx);
 		JS_API static duk_ret_t Remove(duk_context* ctx);
+		JS_API static duk_ret_t MapTo(duk_context* ctx);
 		JS_API static duk_ret_t CreateElement(duk_context* ctx);
 		JS_API static duk_ret_t SetStyleSheet(duk_context* ctx);
 		JS_API static duk_ret_t CreateOption(duk_context* ctx);

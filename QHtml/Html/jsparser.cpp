@@ -91,6 +91,9 @@ namespace ysp::qt::html {
 		binder->setGlobal("document");
 	}
 	void JsParser::PushJsValue(const std::shared_ptr<JsValue>& value) {
+		PushJsValue(ctx, value);
+	}
+	void JsParser::PushJsValue(duk_context* ctx, const std::shared_ptr<JsValue>& value) {
 		void* v = value->value;
 		switch (value->type) {
 		case JS_TYPE_STRING: { // std::string
@@ -116,11 +119,11 @@ namespace ysp::qt::html {
 			break;
 		}
 		case JS_TYPE_CLASS: { // std::map<std::string, std::shared_ptr<JsValue>>
-			PushJsObject((JsClass*)v);
+			PushJsObject(ctx, (JsClass*)v);
 			break;
 		}
 		case JS_TYPE_ARRAY: { // std::vector<std::shared_ptr<JsValue>>
-			PushJsArray((JsArray*)v);
+			PushJsArray(ctx, (JsArray*)v);
 			break;
 		}
 		default:
@@ -128,21 +131,28 @@ namespace ysp::qt::html {
 			break;
 		}
 	}
-	void JsParser::PushJsObject(const JsClass* obj) {
+	void JsParser::PushJsObject(duk_context* ctx, const JsClass* obj) {
 		duk_push_object(ctx);
 		for (auto it = obj->begin(); it != obj->end(); ++it) {
 			const QString& key = it->first;
 			const std::shared_ptr<JsValue>& value = it->second;
-			PushJsValue(value);
+			PushJsValue(ctx, value);
 			duk_put_prop_string(ctx, -2, key.trimmed().toUtf8().constData());
 		}
 	}
-	void JsParser::PushJsArray(const JsArray* arr) {
+	void JsParser::PushJsArray(duk_context* ctx, const JsArray* arr) {
 		duk_push_array(ctx);
 		for (size_t i = 0; i < arr->size(); ++i) {
-			PushJsValue(arr->at(i));
+			PushJsValue(ctx, arr->at(i));
 			duk_put_prop_index(ctx, -2, i);
 		}
+	}
+	void JsParser::PushJsObject(const JsClass* obj) {
+		PushJsObject(ctx, obj);
+
+	}
+	void JsParser::PushJsArray(const JsArray* arr) {
+		PushJsArray(ctx, arr);
 	}
 
 	void JsParser::Trigger(const QString& callbackType, const std::vector<std::shared_ptr<JsValue>>& params, bool global) {
@@ -207,6 +217,7 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("min", DUK_GETTER("min"), DUK_SETTER("min"));
 		binder->bindAttributeMethod("max", DUK_GETTER("max"), DUK_SETTER("max"));
 		binder->bindAttributeMethod("value", DUK_GETTER("value"), DUK_SETTER("value"));
+		binder->bindAttributeMethod("textContent", DUK_GETTER("textContent"), DUK_SETTER("textContent"));
 		binder->bindAttributeMethod("textWidth", DUK_GETTER("textWidth"), nullptr);
 		binder->bindAttributeMethod("textHeight", DUK_GETTER("textHeight"), nullptr);
 		binder->bindAttributeMethod("top", DUK_GETTER("top"), DUK_SETTER("top"));
@@ -225,6 +236,7 @@ namespace ysp::qt::html {
 		binder->bindMethod("append", Append, 1);
 		binder->bindMethod("remove", Remove, 1);
 		binder->bindMethod("delete", Delete, 0);
+		binder->bindMethod("mapTo", MapTo, 1);
 		duk_put_global_string(ctx, CWidget::GetKeyString(widget).toUtf8().constData());
 	}
 
@@ -333,6 +345,9 @@ namespace ysp::qt::html {
 					QFontMetrics fm(qlabel->font());
 					QString text = qlabel->text();
 					duk_push_int(ctx, fm.size(Qt::TextSingleLine, text).height());
+				}
+				else if (key == "textContent") {
+					duk_push_string(ctx, qlabel->text().toUtf8().constData());
 				}
 			}
 			else if (classname == "QProgressBar") {
@@ -504,6 +519,15 @@ namespace ysp::qt::html {
 			const bool v = duk_require_boolean(ctx, 0);
 			w->setEnabled(v);
 		}
+		else if (classname == "QLabel") {
+			QLabel* qlabel = (QLabel*)w;
+			if (key == "textContent") {
+				if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+					"parameter is not string.");
+				const char* v = duk_require_string(ctx, 0);
+				qlabel->setText(QString::fromUtf8(v));
+			}
+		}
 		else if (classname == "QProgressBar") {
 			QProgressBar* bar = ((QProgressBar*)w);
 			if (!duk_is_number(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
@@ -522,8 +546,6 @@ namespace ysp::qt::html {
 		return 0;
 	}
 	void JsParser::ExpandArray(duk_context* ctx, qint32 position, qint32 length) {
-		duk_push_int(ctx, length);
-		duk_put_prop_string(ctx, position, "length");
 		duk_push_c_function(ctx, ArrayForEach, 1);
 		duk_put_prop_string(ctx, position, "forEach");
 	}
@@ -610,6 +632,17 @@ namespace ysp::qt::html {
 		if (w && classname == "QComboBox") {
 			QComboBox* comboBox = (QComboBox*)w;
 			comboBox->addItem(text, value);
+			duk_push_this(ctx);
+			duk_size_t current_length = duk_get_length(ctx, -1);
+			duk_push_int(ctx, current_length);
+			duk_ret_t result = CreateOption(ctx);
+			if (!duk_is_undefined(ctx, -1)) {
+				duk_put_prop_index(ctx, -3, current_length);
+			}
+			else {
+				duk_pop(ctx);
+			}
+			duk_pop(ctx);
 		}
 		//更新数组大小
 		return 0;
@@ -1017,6 +1050,41 @@ namespace ysp::qt::html {
 				"object is undefined.");
 		}
 		return 0;
+	}
+	JS_API duk_ret_t JsParser::MapTo(duk_context* ctx) {
+		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"[mapTo]The number of parameters(1) is incorrect");
+		if (!duk_is_object(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+			"[mapTo]parameter is not object.");
+		auto* w = ThisWidget(ctx);
+		if (!w) {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"[mapTo]C++ object is null.");
+		}
+		QWidget* map = nullptr;
+		duk_require_object(ctx, 0);//获取到参数对象
+		duk_get_prop_string(ctx, -1, K_PTRKEY);
+		if (!duk_is_undefined(ctx, -1)) {
+			map = static_cast<QWidget*>(duk_get_pointer(ctx, -1));
+			duk_pop_2(ctx);
+			if (map) {
+				QPoint postion = w->mapTo(map, QPoint(0, 0));
+				JsClass* obj = new JsClass;
+				(*obj)["x"] = JsValue::CreateValue(postion.x());
+				(*obj)["y"] = JsValue::CreateValue(postion.y());
+				PushJsValue(ctx, JsValue::CreateValue(obj));
+			}
+			else {
+				return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+					"[mapTo]C++ object is null.");
+			}
+		}
+		else {
+			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+				"[mapTo]object is undefined.");
+		}
+		return 1;
+
 	}
 	JS_API duk_ret_t JsParser::CreateElement(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1)return ThrowError(ctx, DUK_RET_TYPE_ERROR,

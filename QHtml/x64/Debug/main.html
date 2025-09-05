@@ -6,9 +6,15 @@
 			height: 360px;
 		}
     .selectBox{
-      width: 500px;
+      top:10px;
       height: 30px;
-      background-color: rgb(91, 162, 190);
+      /* background-color: rgb(91, 162, 190); */
+    }
+    #selectBox1{
+      left: 10px;
+    }
+    #selectBox2{
+      right: 10px;
     }
     label {
       width: 80px;
@@ -26,41 +32,48 @@
 		top:0px;
 	  }
     </style>
-    <custom>
-        <selectBox>
-            <div class= 'selectBox'>
-                <label class= 'selectBox2'>实体名称:</label>
-                <select>
-                  <option value="red">红色</option>
-                  <option value="blue">蓝色</option>
-                </select>
-            </div>
-        </selectBox>
-    </custom>
 </head>
 <body>
-    <selectBox>	
-    </selectBox>
+  <div class= 'selectBox' id = 'selectBox1'>
+      <label>实体名称:</label>
+      <select>
+        <option value="B">弹头(B)</option>
+        <option value="C">弹壳(C)</option>
+        <option value="T">工痕(T)</option>
+        <option value="F">文件(F)</option>
+        <option value="O">其他(O)</option>
+      </select>
+    </div>
+    <div class= 'selectBox' id = 'selectBox2'>
+      <label>实体名称:</label>
+      <select>
+        <option value="B">弹头(B)</option>
+        <option value="C">弹壳(C)</option>
+        <option value="T">工痕(T)</option>
+        <option value="F">文件(F)</option>
+        <option value="O">其他(O)</option>
+      </select>
+    </div>
     <script>
 		function setUpUi() {
-			const selectBox = document.querySelector('.selectBox');
-			if(selectBox) {
-				const slabel = selectBox._('label');
-				const sselect = selectBox._('select');
+			const selectBoxs = document.querySelectorAll('.selectBox');
+      selectBoxs.forEach(function(selectBox){
+        const id = selectBox.id;
+        const slabel = selectBox._('label');//左侧label
+				const sselect = selectBox._('select');//右侧弹头
         const offset = 10;
+      //  console.log(slabel.left);
         sselect.left = slabel.left + slabel.textWidth + offset;
-        const options = sselect.options;
-        options.addOption('新世界');
-        console.log(options);
-        console.log(options.length);
-        options.forEach(function(option) {
-          console.log(option.value,option.text);
-          // option.value = 'test';
-          // option.text = '文本';
-          // sselect.appendChild(optionElement);
-        });
+        selectBox.width = sselect.leftEnd;
+        if(id === 'selectBox2') {
+          selectBox.right = 10;
 
-			}
+        }
+       // selectBox.left = 
+        // console.log(selectBox.width);
+        // console.log(selectBox.left);
+        // console.log(selectBox.right)
+      });
 		}
         window.addEventListener('load', function () {
            setUpUi();

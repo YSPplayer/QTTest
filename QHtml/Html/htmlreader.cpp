@@ -10,6 +10,7 @@
 #include "jscompiler.h"
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
+		rootwidget = nullptr;
 		QFile file(filePath);
 		if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
@@ -26,8 +27,8 @@ namespace ysp::qt::html {
 		QXmlStreamReader xml(html);
 		QList<std::shared_ptr<ElementData>> elements;
 		QList<std::shared_ptr<ElementData>> customs;
-		QList<CSSRule*> cssrules;
 		CSSParser cssParser;
+		cssrules.clear();
 		LinkBridge::jsParser.Init();//初始化全局JS环境
 		while (!xml.atEnd() && !xml.hasError()) {
 			const QXmlStreamReader::TokenType& token = xml.readNext();
@@ -47,8 +48,42 @@ namespace ysp::qt::html {
 		}
 		//全局样式
 		if (cssrules.count() > 0) LinkBridge::cssrules.append(cssrules);
-		CWidget* widget = ElementsToQWidegt(elements, customs);
-		return widget;
+		rootwidget = ElementsToQWidegt(elements, customs);
+		return rootwidget;
+	}
+
+	/// <summary>
+	/// 清空所有的组件内容
+	/// </summary>
+	void HtmlReader::Clear() {
+		if (!rootwidget) return;
+		//剔除css
+		for (CSSRule* rule : cssrules) {
+			LinkBridge::cssrules.removeAll(rule);
+		}
+		for (CSSRule* rule : cssrules) {
+			delete rule;
+			rule = nullptr;
+		}
+		//剔除js
+		QString script = R"(
+				function _$remove_body_%1() {
+					const body = document.getElementByKey('%1');
+					if(body == null) return;
+					body.children.forEach(function(child){
+						if(child != null) {
+							child.delete();
+							child = null;
+						}
+					});
+					body = null;
+				}
+				_$remove_body_%1();
+			)";
+		LinkBridge::jsParser.RunJs(script.arg(CWidget::GetKeyString(rootwidget)).toUtf8().constData());
+		rootwidget->setParent(nullptr);
+		delete rootwidget;
+		rootwidget = nullptr;
 	}
 
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
@@ -189,10 +224,11 @@ namespace ysp::qt::html {
 		LinkBridge::ParseAttributesBody(parent);
 		for (qint32 i = 0; i < elements.size(); ++i) {
 			auto& element = elements[i];
-			qDebug() << element->tag;
 			if (!element.get()) continue;
 			QWidget* widget = nullptr;
-			if (element->tag == "div") widget = new CWidget;
+			if (element->tag == "div") {
+				widget = new CWidget;
+			}
 			else if (element->tag == "progress") {
 				widget = new CProgressBar;
 			}
@@ -270,6 +306,7 @@ namespace ysp::qt::html {
 			LinkBridge::ParseAttributes(element.get(), widget);
 			LinkBridge::jsParser.CreateDocument(widget);
 		}
+		LinkBridge::jsParser.CreateDocument(parent);
 		return parent;
 	}
 }
