@@ -7,6 +7,7 @@
 #include "listfilter.h"
 #include "include.h"
 #include <QFile>
+#include <QApplication>
 #include "jslibrary.h"
 namespace ysp::qt::html {
 	/*
@@ -224,6 +225,7 @@ namespace ysp::qt::html {
 		binder->bindAttributeMethod("bottom", DUK_GETTER("bottom"), DUK_SETTER("bottom"));
 		binder->bindAttributeMethod("left", DUK_GETTER("left"), DUK_SETTER("left"));
 		binder->bindAttributeMethod("leftEnd", DUK_GETTER("leftEnd"), nullptr);
+		binder->bindAttributeMethod("src", nullptr, DUK_SETTER("src"));
 		binder->bindAttributeMethod("right", DUK_GETTER("right"), DUK_SETTER("right"));
 		binder->bindAttributeMethod("visible", DUK_GETTER("visible"), DUK_SETTER("visible"));
 		binder->bindAttributeMethod("style", DUK_GETTER("style"), DUK_SETTER("style"));
@@ -526,6 +528,15 @@ namespace ysp::qt::html {
 					"parameter is not string.");
 				const char* v = duk_require_string(ctx, 0);
 				qlabel->setText(QString::fromUtf8(v));
+			}
+		}
+		else if (classname == C_IMAGE) {
+			CImage* cimage = (CImage*)w;
+			if (key == "src") {
+				if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
+					"parameter is not string.");
+				const char* v = duk_require_string(ctx, 0);
+				cimage->setPixmap(QApplication::applicationDirPath() + "/" + QString::fromUtf8(v));
 			}
 		}
 		else if (classname == "QProgressBar") {

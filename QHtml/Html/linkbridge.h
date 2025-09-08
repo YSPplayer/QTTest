@@ -15,6 +15,7 @@
 #include "stylebuilder.h"
 #include "cssparser.h"
 namespace ysp::qt::html {
+#define C_IMAGE "ysp::qt::html::CImage"
 	struct ElementData {
 		std::shared_ptr<ElementData> parent{ nullptr };
 		QList<std::shared_ptr<ElementData>> childs{ };

@@ -9,4 +9,6 @@ namespace ysp::qt::html {
 		setAutoFillBackground(true);
 		setAttribute(Qt::WA_NoChildEventsForParent, true);
 	}
+	CImage::CImage(QWidget* parent) {
+	}
 }

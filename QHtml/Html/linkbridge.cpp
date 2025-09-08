@@ -43,7 +43,7 @@ namespace ysp::qt::html {
 				CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 			}
 			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"},
-				{"QProgressBar","progress"},{"QComboBox","select"} };
+				{"QProgressBar","progress"},{"QComboBox","select"},{C_IMAGE,"img"} };
 			void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 				JsClass* obj = new JsClass;
 				(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
@@ -280,6 +280,12 @@ namespace ysp::qt::html {
 					CLabel* clabel = ((CLabel*)widget);
 					if (lkey == "text-align" && value == "center") {
 						clabel->setAlignment(Qt::AlignCenter);
+					}
+				}
+				else if (classname == C_IMAGE) {
+					CImage* cimage = ((CImage*)widget);
+					if (lkey == "src") {
+						cimage->setPixmap(QApplication::applicationDirPath() + "/" + value);
 					}
 				}
 				else if (classname == "QProgressBar") {

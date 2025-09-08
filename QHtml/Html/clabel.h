@@ -10,4 +10,11 @@ namespace ysp::qt::html {
 		explicit CLabel(QWidget* parent = nullptr);
 		~CLabel() = default;
 	};
+
+	class CImage :public QLabel {
+		Q_OBJECT
+	public:
+		explicit CImage(QWidget* parent = nullptr);
+		~CImage() = default;
+	};
 }

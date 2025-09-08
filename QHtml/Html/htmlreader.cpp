@@ -255,6 +255,11 @@ namespace ysp::qt::html {
 				label->setText(element->text);
 				widget = label;
 			}
+			else if (element->tag == "img") {
+				CImage* image = new CImage;
+				qDebug() << image->metaObject()->className();
+				widget = image;
+			}
 			else if (element->tag == "option") {
 				if (element->parent == nullptr || element->parent->tag != "select") {
 					continue;
