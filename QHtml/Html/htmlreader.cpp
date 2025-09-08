@@ -11,17 +11,9 @@
 namespace ysp::qt::html {
 	HtmlReader::HtmlReader(const QString& filePath) {
 		rootwidget = nullptr;
-		QFile file(filePath);
-		if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-		{
-			qDebug() << "[HtmlReader]could not open file:" << filePath;
-			qDebug() << "[HtmlReader]error:" << file.errorString();
-			return;
-		}
-		const QByteArray& data = file.readAll();
-		file.close();
-		html = QString::fromUtf8(data);
-		html = JsCompiler::ToCompilerScript(html, true);//替换特殊字符
+		html = "";
+		this->filePath = filePath;
+		LoadHtml();
 	}
 	CWidget* HtmlReader::Parse() {
 		QXmlStreamReader xml(html);
@@ -65,6 +57,10 @@ namespace ysp::qt::html {
 			delete rule;
 			rule = nullptr;
 		}
+		QString key = CWidget::GetKeyString(rootwidget);
+		rootwidget->hide();
+		rootwidget->setParent(nullptr);
+		rootwidget = nullptr;
 		//剔除js
 		QString script = R"(
 				function _$remove_body_%1() {
@@ -76,14 +72,33 @@ namespace ysp::qt::html {
 							child = null;
 						}
 					});
+					body.delete();
 					body = null;
 				}
 				_$remove_body_%1();
+				_$remove_body_%1 = null;
 			)";
-		LinkBridge::jsParser.RunJs(script.arg(CWidget::GetKeyString(rootwidget)).toUtf8().constData());
-		rootwidget->setParent(nullptr);
-		delete rootwidget;
-		rootwidget = nullptr;
+		LinkBridge::jsParser.RunJs(script.arg(key).toUtf8().constData());
+	}
+
+	CWidget* HtmlReader::ReParse() {
+		Clear();
+		LoadHtml();
+		return Parse();
+	}
+
+	bool HtmlReader::LoadHtml() {
+		QFile file(filePath);
+		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+			qDebug() << "[HtmlReader]could not open file:" << filePath;
+			qDebug() << "[HtmlReader]error:" << file.errorString();
+			return false;
+		}
+		const QByteArray& data = file.readAll();
+		file.close();
+		html = QString::fromUtf8(data);
+		html = JsCompiler::ToCompilerScript(html, true);//替换特殊字符
+		return true;
 	}
 
 	void HtmlReader::ParseChildElements(QXmlStreamReader& xml, QList<std::shared_ptr<ElementData>>& elements) {
