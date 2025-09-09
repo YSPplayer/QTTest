@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
 	QWidget* rootwidget = new QWidget;
 	rootwidget->installEventFilter(new F5EventFilter(r, rootwidget));
 	CWidget* widget = r->Parse();
+	rootwidget->resize(widget->size());
 	widget->setParent(rootwidget);
-	widget->resize(rootwidget->size());
 	for (QWidget* w : widget->findChildren<QWidget*>()) {
 		qDebug() << w->geometry();
 		qDebug() << w->metaObject()->className();

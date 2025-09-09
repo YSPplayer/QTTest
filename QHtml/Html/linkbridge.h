@@ -18,6 +18,8 @@ namespace ysp::qt::html {
 #define C_IMAGE "ysp::qt::html::CImage"
 
 #define STYLE_FLAG_COLUMN 0x1 //竖直排列
+#define STYLE_FLAG_ROW 0x2 //横向排列
+#define STYLE_FLAG_ALIGN_ITEMS_CENTER 0x4 //排列居中
 	struct ElementData {
 		std::shared_ptr<ElementData> parent{ nullptr };
 		QList<std::shared_ptr<ElementData>> childs{ };
@@ -30,9 +32,10 @@ namespace ysp::qt::html {
 		static JsParser jsParser;
 		static const QList<QString> eventType;
 		static QMap<QWidget*, StyleBuilder> styleBuilder;
+		static QMap<std::shared_ptr<ElementData>, QWidget*> datamap;
 		static QMap<QString, QString> classmap;
 		static QMap<QWidget*, quint64> flagType;
-		static const QMap<QString, qint32> valuemap;
+		static const QMap<QString, quint64> valuemap;
 		static QList<CSSRule*> cssrules;
 		static void Print(const char* str);
 		static void TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global = false);
@@ -58,7 +61,9 @@ namespace ysp::qt::html {
 		static QList<QString> Split(const QString& key, const QString& split);
 		static bool ContainsId(const QString& id);
 		qint32 static FindSubstringEndIndex(const QString& mainStr, const QString& subStr);
+		QString static RemoveOuterDots(const QString& str);
 	private:
-		static void CheckFlag(QWidget* widget);
+		static void CheckFlag(QWidget* widget, QMap<QString, QString>& attributes);
+		static qint32 CheckWidgetMargin(QWidget* widget, const QString& direction);
 	};
 }

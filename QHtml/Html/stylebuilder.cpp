@@ -115,4 +115,20 @@ namespace ysp::qt::html {
 	StyleBuilder& StyleBuilder::SetBorderLeft(qint32 width, const QString& style, const QString& color) {
 		return SetStyle("border-left", QString("%1px %2 %3").arg(width).arg(style).arg(color));
 	}
+
+	StyleBuilder& StyleBuilder::SetBackgroundImage(const QString& imagePath) {
+		return SetStyle("background-image", QString("url(%1)").arg(imagePath));
+	}
+
+	StyleBuilder& StyleBuilder::SetBackgroundRepeat(const QString& repeat) {
+		return SetStyle("background-repeat", repeat);
+	}
+
+	StyleBuilder& StyleBuilder::SetBackgroundPosition(const QString& position) {
+		return SetStyle("background-position", position);
+	}
+
+	StyleBuilder& StyleBuilder::SetBackgroundSize(const QString& size) {
+		return SetStyle("icon-size", size);
+	}
 }

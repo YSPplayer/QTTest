@@ -26,6 +26,10 @@ namespace ysp::qt::html {
 		StyleBuilder& SetBorderRight(qint32 width, const QString& style, const QString& color);
 		StyleBuilder& SetBorderBottom(qint32 width, const QString& style, const QString& color);
 		StyleBuilder& SetBorderLeft(qint32 width, const QString& style, const QString& color);
+		StyleBuilder& SetBackgroundImage(const QString& imagePath);
+		StyleBuilder& SetBackgroundRepeat(const QString& repeat);
+		StyleBuilder& SetBackgroundPosition(const QString& position);
+		StyleBuilder& SetBackgroundSize(const QString& size);
 		QString GetStyles();
 		QString ToString();
 	private:

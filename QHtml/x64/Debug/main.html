@@ -2,78 +2,82 @@
 <head>
     <style>
 		body {
-			width: 570px;
-			height: 360px;
+			width: 245px;
+			height: 230px;
 		}
-    .selectBox{
-      top:10px;
-      height: 30px;
-      /* background-color: rgb(91, 162, 190); */
-    }
-    #selectBox1{
-      left: 10px;
-    }
-    #selectBox2{
-      right: 10px;
-    }
-    label {
-      width: 80px;
-      height: 30px;
-      left:0px;
-      top:0px;
-      font-size: 9px;
+    #container {
+      width: 100%;
+      height: 100%;
+      background-color: rgb(240,240,240);
+      flex-direction: column;
       align-items: center;
+    }
+    #title {
+      width: 100%;
+      height: 45px;
+      font-family: "Microsoft YaHei","微软雅黑","MS YaHei","YaHei","SimSun","宋体","Arial", "Helvetica";
+      font-size: 11px;
+      text-align: vcenter;
+      text-indent: 10px;
+      background-color: rgb(240,240,240);
+      border-bottom: 1px solid #CECECE;
+    }
+    .queue-container {
+      width: 100%;
+      height: 45px;
+      border-bottom: 1px solid #CECECE;
+      flex-direction: row;
+      align-items: center;
+    }
+    .queue-label {
+      width: 120px;
+      height: 32px;
+      font-family: "Microsoft YaHei","微软雅黑","MS YaHei","YaHei","SimSun","宋体","Arial", "Helvetica";
+      font-size: 10px;
+      /* text-indent: 10px; */
+      text-align: vcenter;
+      margin-left: 15px;
+    }
+    .queue-img {
+      width: 27px;
+      height: 27px;
+      object-fit: fill;
+      margin-left: 25px;
+    }
+    .queue-button {
+      width: 40px;
+      height: 27px;
+      background-image:url('./2.png');
+      background-repeat: no-repeat;
+      background-position: center;
+      border:none;
       background-color: transparent;
     }
-  select {
-		width: 100px;
-		height: 30px;
-		left:100px;
-		top:0px;
-	  }
     </style>
 </head>
 <body>
-  <div class= 'selectBox' id = 'selectBox1'>
-      <label>实体名称:</label>
-      <select>
-        <option value="B">弹头(B)</option>
-        <option value="C">弹壳(C)</option>
-        <option value="T">工痕(T)</option>
-        <option value="F">文件(F)</option>
-        <option value="O">其他(O)</option>
-      </select>
+    <div id="container">
+      <label id='title'>工作流</label>
+      <div class="queue-container">
+        <img class='queue-img' src='./1.png'/>
+        <label class='queue-label'>滤波</label>
+        <button class='queue-button'/>
     </div>
-    <div class= 'selectBox' id = 'selectBox2'>
-      <label>实体名称:</label>
-      <select>
-        <option value="B">弹头(B)</option>
-        <option value="C">弹壳(C)</option>
-        <option value="T">工痕(T)</option>
-        <option value="F">文件(F)</option>
-        <option value="O">其他(O)</option>
-      </select>
-    </div>
+    <div class="queue-container">
+      <img class='queue-img' src='./1.png'/>
+      <label class='queue-label'>滤波</label>
+      <button class='queue-button'/>
+  </div>
+      </div>
     <script>
 		function setUpUi() {
-			const selectBoxs = document.querySelectorAll('.selectBox');
-      selectBoxs.forEach(function(selectBox){
-        const id = selectBox.id;
-        const slabel = selectBox._('label');//左侧label
-				const sselect = selectBox._('select');//右侧弹头
-        const offset = 10;
-      //  console.log(slabel.left);
-        sselect.left = slabel.left + slabel.textWidth + offset;
-        selectBox.width = sselect.leftEnd;
-        if(id === 'selectBox2') {
-          selectBox.right = 10;
-
-        }
-       // selectBox.left = 
-        // console.log(selectBox.width);
-        // console.log(selectBox.left);
-        // console.log(selectBox.right)
-      });
+      const container = _('#container');
+      const title = _('#title');
+      console.log(container.width);
+      console.log(container.height);
+      console.log(title.width);
+      console.log(title.height);
+      console.log('===========')
 		}
         window.addEventListener('load', function () {
            setUpUi();

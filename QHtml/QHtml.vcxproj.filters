@@ -37,9 +37,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Html\htmlreader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -73,6 +70,15 @@
     <ClCompile Include="Html\jscompiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Html\ccombobox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Html\cpushbutton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Html\stylebuilder.h">
@@ -96,9 +102,6 @@
     <ClInclude Include="Html\cprogressbar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Html\clabel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Html\include.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -106,6 +109,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Html\jslibrary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\ccombobox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Html\cpushbutton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -119,8 +128,8 @@
     <QtMoc Include="Html\htmlreader.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="QHtml\main.html" />
+    <QtMoc Include="Html\clabel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
 </Project>

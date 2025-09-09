@@ -268,11 +268,12 @@ namespace ysp::qt::html {
 			QString mid = "";
 			QList<QString> filter = { "#",".",":", "" };
 			if (id != "") {
-				index = LinkBridge::FindSubstringEndIndex(key, "#" + id);
+				if (key == "#" + id) return true;
+				/*index = LinkBridge::FindSubstringEndIndex(key, "#" + id);
 				if (index != -1) {
 					mid = index >= key.length() - 1 ? "" : key.mid(index, 1);
 					if (filter.contains(mid)) return true;
-				}
+				}*/
 			}
 			if (classValue != "") {
 				const QStringList& classList = classValue.split(" ", Qt::SkipEmptyParts);
@@ -287,11 +288,12 @@ namespace ysp::qt::html {
 				}
 			}
 			if (classType != "") {
-				index = LinkBridge::FindSubstringEndIndex(key, classType);
+				if (classType == key) return true;
+				/*index = LinkBridge::FindSubstringEndIndex(key, classType);
 				if (index != -1) {
 					mid = index >= key.length() - 1 ? "" : key.mid(index, 1);
 					if (filter.contains(mid)) return true;
-				}
+				}*/
 			}
 		}
 		return false;

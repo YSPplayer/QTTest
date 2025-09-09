@@ -7,3 +7,4 @@
 #include "cprogressbar.h"
 #include "clabel.h"
 #include "ccombobox.h"
+#include "cpushbutton.h"

@@ -3,6 +3,7 @@
 	2025.8.3
 */
 #include <QDebug>
+#include <QDir>
 #include <QFontDatabase>
 #include <QApplication>
 #include "listfilter.h"
@@ -38,14 +39,16 @@ namespace ysp::qt::html {
 				"mousedown","mousemove","mouseup","load","resize","wheel","keydown",
 				"keyup","close","mouseenter","mouseleave","dblclick"
 			};
-			QMap<QString, qint32> const LinkBridge::valuemap = {
+			QMap<QString, quint64> const LinkBridge::valuemap = {
 				{"text-align_center",Qt::AlignCenter},{"text-align_left",Qt::AlignLeft},
 				{"text-align_right",Qt::AlignRight},{"text-align_vcenter",Qt::AlignVCenter},
-				{"text-align_hcenter",Qt::AlignHCenter}
+				{"text-align_hcenter",Qt::AlignHCenter},{"flex-direction_column",STYLE_FLAG_COLUMN},
+				{"flex-direction_row",STYLE_FLAG_ROW}
 			};
 			QMap<QWidget*, StyleBuilder> LinkBridge::styleBuilder;
 			QList<CSSRule*> LinkBridge::cssrules;
 			QMap<QWidget*, quint64>  LinkBridge::flagType;
+			QMap<std::shared_ptr<ElementData>, QWidget*> LinkBridge::datamap;
 			void LinkBridge::Print(const char* str) {
 #ifdef _DEBUG
 				qDebug() << str;
@@ -53,7 +56,7 @@ namespace ysp::qt::html {
 				CWidget::AppendConsoleWindowMsg(QString::fromUtf8(str));
 			}
 			QMap<QString, QString> LinkBridge::classmap = { {"QWidget","div"},{"QLabel","label"},
-				{"QProgressBar","progress"},{"QComboBox","select"},{C_IMAGE,"img"} };
+				{"QProgressBar","progress"},{"QComboBox","select"},{C_IMAGE,"img"},{"QPushButton","button"} };
 			void LinkBridge::TriggerJsEvent(const QString& target, const QString& key, QResizeEvent* event, bool global) {
 				JsClass* obj = new JsClass;
 				(*obj)["oldOffsetWidth"] = JsValue::CreateValue(event->oldSize().width());
@@ -130,8 +133,6 @@ namespace ysp::qt::html {
 			void LinkBridge::ParseAttributes(ElementData* element, QWidget* widget) {
 				widget->setAutoFillBackground(true);
 				widget->setGeometry(0, 0, 0, 0);
-				//先查找是否有特定排列的样式
-				CheckFlag(widget);
 				QMap<QString, QString>& attributes = element->attributes;
 				QString id = "";
 				QString classname = "";
@@ -183,17 +184,21 @@ namespace ysp::qt::html {
 				if (attributes.contains("style")) {
 					QMap<QString, QString> styleattributes;
 					ParseStyleString(attributes["style"], styleattributes);
+					//加入新的标签，有则替换
 					for (const QString& key : styleattributes.keys()) {
-						ParseKey(key, widget, builder, styleattributes);
+						//ParseKey(key, widget, builder, styleattributes);
+						attributes[key] = styleattributes[key];
 					}
 				}
-				//解析非style值的标签
+				//解析所有的标签
 				for (const QString& key : attributes.keys()) {
 					if (key == "style") continue;
 					ParseKey(key, widget, builder, attributes);
 				}
 				QString bulider = builder.ToString();
 				if (bulider != "") widget->setStyleSheet(bulider);
+				//查找是否有特定排列的样式
+				CheckFlag(widget, attributes);
 			}
 			void LinkBridge::ParseAttributesBody(QWidget* widget) {
 				QMap<QString, QString> attributes;
@@ -282,11 +287,20 @@ namespace ysp::qt::html {
 					}
 				}
 				else if (lkey == "flex-direction") {
+					quint64 flag = valuemap.value(lkey + "_" + value, STYLE_FLAG_ROW);
 					if (flagType.contains(widget)) {
-						flagType[widget] |= STYLE_FLAG_COLUMN;
+						flagType[widget] |= flag;
 					}
 					else {
-						flagType[widget] = STYLE_FLAG_COLUMN;
+						flagType[widget] = flag;
+					}
+				}
+				else if (lkey == "align-items" && value == "center") {
+					if (flagType.contains(widget)) {
+						flagType[widget] |= STYLE_FLAG_ALIGN_ITEMS_CENTER;
+					}
+					else {
+						flagType[widget] = STYLE_FLAG_ALIGN_ITEMS_CENTER;
 					}
 				}
 				else if (lkey == "border") {
@@ -344,6 +358,28 @@ namespace ysp::qt::html {
 						builder.SetBorderLeft(width, style, color);
 					}
 				}
+				else if (lkey == "background-image") {
+					if (value.startsWith("url(") && value.endsWith(")")) {
+						value = value.mid(4, value.length() - 5);
+						if ((value.startsWith("\"") && value.endsWith("\"")) ||
+							(value.startsWith("'") && value.endsWith("'"))) {
+							value = value.mid(1, value.length() - 2);
+						}
+					}
+					QDir dir(QApplication::applicationDirPath());
+					QString fullPath = dir.absoluteFilePath(value);
+					fullPath = QDir(fullPath).canonicalPath();
+					builder.SetBackgroundImage(fullPath);
+				}
+				else if (lkey == "background-repeat") {
+					builder.SetBackgroundRepeat(value);
+				}
+				else if (lkey == "background-position") {
+					builder.SetBackgroundPosition(value);
+				}
+				else if (lkey == "background-size") {
+					builder.SetBackgroundSize(value);
+				}
 				else if (lkey == "onclick" || lkey == "onmousemove" ||
 					lkey == "onmouseup" || lkey == "onmousedown" || lkey == "onmouseenter"
 					|| lkey == "onmouseleave" || lkey == "ondblclick") { //增加触发事件
@@ -381,8 +417,10 @@ namespace ysp::qt::html {
 						if (path.startsWith('"') && path.endsWith('"')) {
 							path = path.mid(1, path.length() - 2);
 						}
-						qDebug() << QApplication::applicationDirPath() + "/" + path;
-						QPixmap pixmap(QApplication::applicationDirPath() + "/" + path);
+						QDir dir(QApplication::applicationDirPath());
+						QString fullPath = dir.absoluteFilePath(path);
+						fullPath = QDir(fullPath).canonicalPath();
+						QPixmap pixmap(fullPath);
 						if (!pixmap.isNull()) {
 							if (attributes.contains("width")) ReSize(attributes["width"], cimage, parent, false);
 							else if (attributes.contains("height"))  ReSize(attributes["height"], cimage, parent, true);;
@@ -523,22 +561,81 @@ namespace ysp::qt::html {
 				}
 				return index + subStr.length() - 1;  // 返回结束索引
 			}
-			void LinkBridge::CheckFlag(QWidget* widget) {
+			QString LinkBridge::RemoveOuterDots(const QString& str) {
+				return QString();
+			}
+			void LinkBridge::CheckFlag(QWidget* widget, QMap<QString, QString>& attributes) {
 				if (!widget) return;
 				QWidget* pwidget = widget->parentWidget();
 				if (pwidget && LinkBridge::flagType.contains(pwidget)) {
 					quint64 flag = LinkBridge::flagType[pwidget];
 					if (flag & STYLE_FLAG_COLUMN) {
 						qint32 ymax = INT_MIN;
-						qDebug() << widget->objectName();
+						QWidget* lastchild = nullptr;
 						for (QWidget* child : pwidget->findChildren<QWidget*>()) {
-							if (!child) continue;
-							qDebug() << child->objectName();
-							ymax = std::max(ymax, child->y() + child->height());
+							if (!child || child == widget) continue;
+							if (child->y() + child->height() >= ymax) {
+								ymax = child->y() + child->height();
+								lastchild = child;
+							}
 						}
-						if (ymax < 0) ymax = 0;
-						widget->move(widget->x(), ymax);
+						if (ymax == INT_MIN) ymax = 0;
+						qint32 margin = 0;
+						margin += CheckWidgetMargin(lastchild, "bottom");
+						margin += CheckWidgetMargin(widget, "top");
+						if (flag & STYLE_FLAG_ALIGN_ITEMS_CENTER) {
+							//应该在父组件中居中
+							widget->move((pwidget->width() - widget->width()) / 2, ymax + margin);
+						}
+						else {
+							widget->move(widget->x(), ymax + margin);
+						}
+
 					}
+					if (flag & STYLE_FLAG_ROW) { //横向
+						qint32 xmax = INT_MIN;
+						QWidget* lastchild = nullptr;
+						for (QWidget* child : pwidget->findChildren<QWidget*>()) {
+							if (!child || child == widget) continue;
+							if (child->x() + child->width() >= xmax) {
+								xmax = child->x() + child->width();
+								lastchild = child;
+							}
+						}
+						if (xmax == INT_MIN) xmax = 0;
+						qint32 margin = 0;
+						margin += CheckWidgetMargin(lastchild, "right");
+						margin += CheckWidgetMargin(widget, "left");
+						if (flag & STYLE_FLAG_ALIGN_ITEMS_CENTER) {
+							widget->move(margin + xmax, (pwidget->height() - widget->height()) / 2);
+						}
+						else {
+							widget->move(margin + xmax, widget->height());
+						}
+					}
+				}
+			}
+
+			qint32 LinkBridge::CheckWidgetMargin(QWidget* widget, const QString& direction) {
+				if (!widget) return 0;
+				const auto& edatas = datamap.keys(widget);
+				if (edatas.count() <= 0) return 0;
+				const auto& edata = edatas[0];
+				auto& attributes = edata->attributes;
+				if (direction == "left" && attributes.contains("margin-left")) {
+					return ToNumberString(attributes["margin-left"]).toInt();
+				}
+				else if (direction == "right" && attributes.contains("margin-right")) {
+					return ToNumberString(attributes["margin-right"]).toInt();
+				}
+				else if (direction == "top" && attributes.contains("margin-top")) {
+					return ToNumberString(attributes["margin-top"]).toInt();
+				}
+				else if (direction == "bottom" && attributes.contains("margin-bottom")) {
+					return ToNumberString(attributes["margin-bottom"]).toInt();
+				}
+				else {
+					return 0;
 				}
 			}
 }

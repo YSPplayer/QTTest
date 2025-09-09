@@ -7,6 +7,7 @@
 #include "listfilter.h"
 #include "include.h"
 #include <QFile>
+#include <QDir>
 #include <QApplication>
 #include "jslibrary.h"
 namespace ysp::qt::html {
@@ -559,7 +560,10 @@ namespace ysp::qt::html {
 				if (!duk_is_string(ctx, 0)) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
 					"parameter is not string.");
 				const char* v = duk_require_string(ctx, 0);
-				cimage->setPixmap(QApplication::applicationDirPath() + "/" + QString::fromUtf8(v));
+				QDir dir(QApplication::applicationDirPath());
+				QString fullPath = dir.absoluteFilePath(QString::fromUtf8(v));
+				fullPath = QDir(fullPath).canonicalPath();
+				cimage->setPixmap(fullPath);
 			}
 		}
 		else if (classname == "QProgressBar") {
@@ -697,6 +701,10 @@ namespace ysp::qt::html {
 			parser->objects.removeOne(w);//数组移除
 			LinkBridge::styleBuilder.remove(w);//样式移除
 			LinkBridge::flagType.remove(w);//标签移除
+			const QList<std::shared_ptr<ElementData>>& keys = LinkBridge::datamap.keys(w);
+			for (auto& key : keys) {
+				LinkBridge::datamap.remove(key);
+			}
 			w->setParent(nullptr);
 			w->deleteLater();//对象删除
 		}
@@ -1133,6 +1141,7 @@ namespace ysp::qt::html {
 		else if (classname == "progress") widget = new CProgressBar();
 		else if (classname == "select") widget = new CComboBox();
 		else if (classname == "img") widget = new CImage();
+		else if (classname == "button") widget = new CPushButton();
 		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
 		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);

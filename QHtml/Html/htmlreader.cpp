@@ -59,6 +59,10 @@ namespace ysp::qt::html {
 		}
 		QString key = CWidget::GetKeyString(rootwidget);
 		LinkBridge::flagType.remove(rootwidget);
+		const QList<std::shared_ptr<ElementData>>& keys = LinkBridge::datamap.keys(rootwidget);
+		for (auto& key : keys) {
+			LinkBridge::datamap.remove(key);
+		}
 		rootwidget->hide();
 		rootwidget->setParent(nullptr);
 		rootwidget = nullptr;
@@ -234,7 +238,6 @@ namespace ysp::qt::html {
 	}
 	CWidget* HtmlReader::ElementsToQWidegt(QList<std::shared_ptr<ElementData>>& elements,
 		QList<std::shared_ptr<ElementData>>& customs) {
-		QMap<std::shared_ptr<ElementData>, QWidget*> map;
 		CWidget* parent = new CWidget(true);
 		parent->resize(1600, 900);
 		//设置body样式
@@ -259,14 +262,18 @@ namespace ysp::qt::html {
 			}
 			else if (element->tag == "img") {
 				CImage* image = new CImage;
-				qDebug() << image->metaObject()->className();
 				widget = image;
+			}
+			else if (element->tag == "button") {
+				CPushButton* button = new CPushButton;
+				button->setText(element->text);
+				widget = button;
 			}
 			else if (element->tag == "option") {
 				if (element->parent == nullptr || element->parent->tag != "select") {
 					continue;
 				}
-				QComboBox* combox = (QComboBox*)map[element->parent];
+				QComboBox* combox = (QComboBox*)LinkBridge::datamap[element->parent];
 				QMap<QString, QString>& attributes = element->attributes;
 				combox->addItem(element->text, element->attributes.value("value", ""));
 				continue;
@@ -312,9 +319,9 @@ namespace ysp::qt::html {
 			if (!widget) continue;
 			if (element->parent != nullptr) {
 				bool success = false;
-				for (const auto& key : map.keys()) {
+				for (const auto& key : LinkBridge::datamap.keys()) {
 					if (element->parent.get() == key.get()) {
-						widget->setParent(map[key]);
+						widget->setParent(LinkBridge::datamap[key]);
 						success = true;
 						break;
 					}
@@ -324,7 +331,7 @@ namespace ysp::qt::html {
 			else {
 				widget->setParent(parent);
 			}
-			map[element] = widget;
+			LinkBridge::datamap[element] = widget;
 			LinkBridge::ParseAttributes(element.get(), widget);
 			LinkBridge::jsParser.CreateDocument(widget);
 		}
