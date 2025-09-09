@@ -81,6 +81,7 @@ namespace ysp::qt::html {
 
 		binder->beginObject();
 		binder->bindMethod("addEventListener", WindowAddEventListener, 2);
+		binder->bindMethod("clearEvent", ClearEvent, 0);
 		binder->setGlobal("window");
 
 		binder->beginObject();
@@ -147,6 +148,28 @@ namespace ysp::qt::html {
 			PushJsValue(ctx, arr->at(i));
 			duk_put_prop_index(ctx, -2, i);
 		}
+	}
+	JS_API duk_ret_t JsParser::ClearEvent(duk_context* ctx) {
+		QByteArray eventKeyBytes;
+		for (const QString& callbackType : LinkBridge::eventType) {
+			qint32 index = 0;
+			while (true) {
+				eventKeyBytes = QString(QString(CXX_CUT_JS_CONST_VALUE) + callbackType + QString::number(index)).toUtf8();
+				duk_get_global_string(ctx, eventKeyBytes.constData());
+				if (!duk_is_function(ctx, -1)) {
+					duk_pop(ctx);
+					break;
+				}
+				else {
+					duk_pop(ctx);
+					duk_push_global_object(ctx);
+					duk_del_prop_string(ctx, -1, eventKeyBytes.constData());
+					duk_pop(ctx);
+					index++;
+				}
+			}
+		}
+		return 0;
 	}
 	void JsParser::PushJsObject(const JsClass* obj) {
 		PushJsObject(ctx, obj);
@@ -673,6 +696,7 @@ namespace ysp::qt::html {
 			duk_del_prop_string(ctx, -1, K_PTRKEY);  // 删除当前JS绑定的指针属性
 			parser->objects.removeOne(w);//数组移除
 			LinkBridge::styleBuilder.remove(w);//样式移除
+			LinkBridge::flagType.remove(w);//标签移除
 			w->setParent(nullptr);
 			w->deleteLater();//对象删除
 		}
@@ -1064,13 +1088,13 @@ namespace ysp::qt::html {
 	}
 	JS_API duk_ret_t JsParser::MapTo(duk_context* ctx) {
 		if (duk_get_top(ctx) < 1) return ThrowError(ctx, DUK_RET_TYPE_ERROR,
-			"[mapTo]The number of parameters(1) is incorrect");
+			"The number of parameters(1) is incorrect");
 		if (!duk_is_object(ctx, 0))  return ThrowError(ctx, DUK_RET_TYPE_ERROR,
-			"[mapTo]parameter is not object.");
+			"parameter is not object.");
 		auto* w = ThisWidget(ctx);
 		if (!w) {
 			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
-				"[mapTo]C++ object is null.");
+				"C++ object is null.");
 		}
 		QWidget* map = nullptr;
 		duk_require_object(ctx, 0);//获取到参数对象
@@ -1087,12 +1111,12 @@ namespace ysp::qt::html {
 			}
 			else {
 				return ThrowError(ctx, DUK_RET_TYPE_ERROR,
-					"[mapTo]C++ object is null.");
+					"C++ object is null.");
 			}
 		}
 		else {
 			return ThrowError(ctx, DUK_RET_TYPE_ERROR,
-				"[mapTo]object is undefined.");
+				"object is undefined.");
 		}
 		return 1;
 
@@ -1108,6 +1132,7 @@ namespace ysp::qt::html {
 		else if (classname == "label") widget = new CLabel();
 		else if (classname == "progress") widget = new CProgressBar();
 		else if (classname == "select") widget = new CComboBox();
+		else if (classname == "img") widget = new CImage();
 		//widget->setObjectName(CWidget::GetKeyString(widget));//默认的objectname
 		//LinkBridge::styleBuilder[widget] = StyleBuilder(widget);
 		LinkBridge::ParseAttributes(std::make_shared<ElementData>().get(), widget);

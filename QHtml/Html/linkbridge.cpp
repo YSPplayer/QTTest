@@ -34,8 +34,18 @@ namespace ysp::qt::html {
 			});
 			)"
 	JsParser LinkBridge::jsParser;
+			QList<QString> const LinkBridge::eventType = {
+				"mousedown","mousemove","mouseup","load","resize","wheel","keydown",
+				"keyup","close","mouseenter","mouseleave","dblclick"
+			};
+			QMap<QString, qint32> const LinkBridge::valuemap = {
+				{"text-align_center",Qt::AlignCenter},{"text-align_left",Qt::AlignLeft},
+				{"text-align_right",Qt::AlignRight},{"text-align_vcenter",Qt::AlignVCenter},
+				{"text-align_hcenter",Qt::AlignHCenter}
+			};
 			QMap<QWidget*, StyleBuilder> LinkBridge::styleBuilder;
 			QList<CSSRule*> LinkBridge::cssrules;
+			QMap<QWidget*, quint64>  LinkBridge::flagType;
 			void LinkBridge::Print(const char* str) {
 #ifdef _DEBUG
 				qDebug() << str;
@@ -120,6 +130,8 @@ namespace ysp::qt::html {
 			void LinkBridge::ParseAttributes(ElementData* element, QWidget* widget) {
 				widget->setAutoFillBackground(true);
 				widget->setGeometry(0, 0, 0, 0);
+				//先查找是否有特定排列的样式
+				CheckFlag(widget);
 				QMap<QString, QString>& attributes = element->attributes;
 				QString id = "";
 				QString classname = "";
@@ -226,10 +238,11 @@ namespace ysp::qt::html {
 				const QString lkey = key;
 				QString value = attributes[key].trimmed();
 				if (lkey == "width") {
-					widget->resize(ToNumberString(value).toInt(), widget->height());
+					ReSize(value, widget, parent, false);
+
 				}
 				else if (lkey == "height") {
-					widget->resize(widget->width(), ToNumberString(value).toInt());
+					ReSize(value, widget, parent, true);
 				}
 				else if (lkey == "top") {
 					widget->move(widget->x(), ToNumberString(value).toInt());
@@ -244,13 +257,13 @@ namespace ysp::qt::html {
 				}
 				else if (lkey == "bottom" && parent) {
 					if (attributes.contains("height")) {
-						widget->resize(widget->width(), ToNumberString(attributes["height"]).toInt());
+						ReSize(value, widget, parent, true);
 					}
 					widget->move(widget->x(), parent->height() - ToNumberString(value).toInt() - widget->height());
 				}
 				else if (lkey == "right" && parent) {
 					if (attributes.contains("width")) {
-						widget->resize(ToNumberString(attributes["width"]).toInt(), widget->height());
+						ReSize(value, widget, parent, false);
 					}
 					widget->move(parent->width() - ToNumberString(value).toInt() - widget->width(), widget->y());
 				}
@@ -268,6 +281,69 @@ namespace ysp::qt::html {
 						builder.SetBorderRadius(ToNumberString(value).toInt());
 					}
 				}
+				else if (lkey == "flex-direction") {
+					if (flagType.contains(widget)) {
+						flagType[widget] |= STYLE_FLAG_COLUMN;
+					}
+					else {
+						flagType[widget] = STYLE_FLAG_COLUMN;
+					}
+				}
+				else if (lkey == "border") {
+					// 解析 border: width style color 格式
+					const QList<QString>& parts = Split(value, " ");
+					if (parts.count() >= 3) {
+						qint32 width = ToNumberString(parts[0]).toInt();
+						QString style = parts[1];
+						QString color = parts[2];
+						builder.SetBorder(width, style, color);
+					}
+				}
+				else if (lkey == "border-width") {
+					builder.SetBorderWidth(ToNumberString(value).toInt());
+				}
+				else if (lkey == "border-style") {
+					builder.SetBorderStyle(value);
+				}
+				else if (lkey == "border-color") {
+					builder.SetBorderColor(value);
+				}
+				else if (lkey == "border-top") {
+					const QList<QString>& parts = Split(value, " ");
+					if (parts.count() >= 3) {
+						qint32 width = ToNumberString(parts[0]).toInt();
+						QString style = parts[1];
+						QString color = parts[2];
+						builder.SetBorderTop(width, style, color);
+					}
+				}
+				else if (lkey == "border-right") {
+					const QList<QString>& parts = Split(value, " ");
+					if (parts.count() >= 3) {
+						qint32 width = ToNumberString(parts[0]).toInt();
+						QString style = parts[1];
+						QString color = parts[2];
+						builder.SetBorderRight(width, style, color);
+					}
+				}
+				else if (lkey == "border-bottom") {
+					const QList<QString>& parts = Split(value, " ");
+					if (parts.count() >= 3) {
+						qint32 width = ToNumberString(parts[0]).toInt();
+						QString style = parts[1];
+						QString color = parts[2];
+						builder.SetBorderBottom(width, style, color);
+					}
+				}
+				else if (lkey == "border-left") {
+					const QList<QString>& parts = Split(value, " ");
+					if (parts.count() >= 3) {
+						qint32 width = ToNumberString(parts[0]).toInt();
+						QString style = parts[1];
+						QString color = parts[2];
+						builder.SetBorderLeft(width, style, color);
+					}
+				}
 				else if (lkey == "onclick" || lkey == "onmousemove" ||
 					lkey == "onmouseup" || lkey == "onmousedown" || lkey == "onmouseenter"
 					|| lkey == "onmouseleave" || lkey == "ondblclick") { //增加触发事件
@@ -278,14 +354,44 @@ namespace ysp::qt::html {
 				}
 				else if (classname == "QLabel") {
 					CLabel* clabel = ((CLabel*)widget);
-					if (lkey == "text-align" && value == "center") {
-						clabel->setAlignment(Qt::AlignCenter);
+					if (lkey == "text-align") {
+						clabel->setAlignment((Qt::AlignmentFlag)valuemap.value(key + "_" + value, Qt::AlignCenter));
+					}
+					else if (lkey == "text-indent") {
+						clabel->setIndent(ToNumberString(value).toInt());
 					}
 				}
 				else if (classname == C_IMAGE) {
 					CImage* cimage = ((CImage*)widget);
-					if (lkey == "src") {
-						cimage->setPixmap(QApplication::applicationDirPath() + "/" + value);
+					if ((lkey == "object-fit" || lkey == "image-rendering" || lkey == "src") && attributes.contains("src")) {
+						Qt::AspectRatioMode flag = Qt::KeepAspectRatio;
+						Qt::TransformationMode render = Qt::SmoothTransformation;
+						if (attributes.contains("object-fit")) {
+							QString fitvalue = attributes["object-fit"];
+							if (fitvalue == "contain") flag = Qt::KeepAspectRatio;
+							else if (fitvalue == "fill") flag = Qt::IgnoreAspectRatio;
+							else if (fitvalue == "cover") flag = Qt::KeepAspectRatioByExpanding;
+						}
+						if (attributes.contains("image-rendering")) {
+							QString rvalue = attributes["image-rendering"];
+							if (rvalue == "pixelated") render = Qt::FastTransformation;
+							else if (rvalue == "smooth") render = Qt::SmoothTransformation;
+						}
+						QString path = attributes["src"];
+						if (path.startsWith('"') && path.endsWith('"')) {
+							path = path.mid(1, path.length() - 2);
+						}
+						qDebug() << QApplication::applicationDirPath() + "/" + path;
+						QPixmap pixmap(QApplication::applicationDirPath() + "/" + path);
+						if (!pixmap.isNull()) {
+							if (attributes.contains("width")) ReSize(attributes["width"], cimage, parent, false);
+							else if (attributes.contains("height"))  ReSize(attributes["height"], cimage, parent, true);;
+							pixmap = pixmap.scaled(cimage->size(), flag, render);
+							cimage->setPixmap(pixmap);
+							attributes.remove("object-fit");
+							attributes.remove("image-rendering");
+							attributes.remove("src");
+						}
 					}
 				}
 				else if (classname == "QProgressBar") {
@@ -301,14 +407,53 @@ namespace ysp::qt::html {
 					}
 				}
 			}
-			QString LinkBridge::ToNumberString(const QString& key) {
+			QString LinkBridge::ToNumberString(const QString& key, qint8* unitType) {
 				qint32 i = 0;
 				bool hasDot = false;
-				while (i < key.length() && (key[i].isDigit() || (!hasDot && key[i] == '.'))) {
-					if (key[i] == '.') hasDot = true;
-					i++;
+				if (unitType) *unitType = 0; // 默认像素单位
+				while (i < key.length()) {
+					if (key[i].isDigit() || (!hasDot && key[i] == '.')) {
+						if (key[i] == '.') hasDot = true;
+						i++;
+					}
+					else {
+						break;
+					}
+				}
+				// 检测单位
+				if (i < key.length()) {
+					if (key[i] == '%') {
+						if (unitType) *unitType = 1;
+					}
+					else if (i + 1 < key.length() && key[i] == 'p' && key[i + 1] == 'x') {
+						if (unitType) *unitType = 0;
+					}
 				}
 				return key.left(i);
+			}
+
+			void LinkBridge::ReSize(const QString& value, QWidget* widget, QWidget* parent, bool isheight) {
+				qint8 unitType = 0;
+				qint32 rvalue = ToNumberString(value, &unitType).toInt();
+				if (isheight) {
+					if (unitType == 0) {
+						widget->resize(widget->width(), rvalue);
+					}
+					else if (unitType == 1 && parent) {
+						qint32 height = (double)parent->height() * ((double)rvalue / 100.0);
+						widget->resize(widget->width(), height);
+					}
+				}
+				else {
+
+					if (unitType == 0) {
+						widget->resize(rvalue, widget->height());
+					}
+					else if (unitType == 1 && parent) {
+						qint32 width = (double)parent->width() * ((double)rvalue / 100.0);
+						widget->resize(width, widget->height());
+					}
+				}
 			}
 
 			QList<QString> LinkBridge::Split(const QString& key, const QString& split) {
@@ -377,5 +522,23 @@ namespace ysp::qt::html {
 					return -1;  // 子串不存在
 				}
 				return index + subStr.length() - 1;  // 返回结束索引
+			}
+			void LinkBridge::CheckFlag(QWidget* widget) {
+				if (!widget) return;
+				QWidget* pwidget = widget->parentWidget();
+				if (pwidget && LinkBridge::flagType.contains(pwidget)) {
+					quint64 flag = LinkBridge::flagType[pwidget];
+					if (flag & STYLE_FLAG_COLUMN) {
+						qint32 ymax = INT_MIN;
+						qDebug() << widget->objectName();
+						for (QWidget* child : pwidget->findChildren<QWidget*>()) {
+							if (!child) continue;
+							qDebug() << child->objectName();
+							ymax = std::max(ymax, child->y() + child->height());
+						}
+						if (ymax < 0) ymax = 0;
+						widget->move(widget->x(), ymax);
+					}
+				}
 			}
 }

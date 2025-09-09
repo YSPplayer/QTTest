@@ -58,14 +58,16 @@ namespace ysp::qt::html {
 			rule = nullptr;
 		}
 		QString key = CWidget::GetKeyString(rootwidget);
+		LinkBridge::flagType.remove(rootwidget);
 		rootwidget->hide();
 		rootwidget->setParent(nullptr);
 		rootwidget = nullptr;
 		//剔除js
 		QString script = R"(
 				function _$remove_body_%1() {
+					window.clearEvent();
 					const body = document.getElementByKey('%1');
-					if(body == null) return;
+					if(body === null) return;
 					body.children.forEach(function(child){
 						if(child != null) {
 							child.delete();

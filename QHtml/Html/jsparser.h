@@ -95,6 +95,7 @@ namespace ysp::qt::html {
 		static duk_ret_t SetOption(duk_context* ctx, const char* name);
 		static duk_ret_t SetValue(duk_context* ctx, const char* name);
 		static void ExpandArray(duk_context* ctx, qint32 position, qint32 length);
+		JS_API static duk_ret_t ClearEvent(duk_context* ctx);
 		JS_API static duk_ret_t ArrayForEach(duk_context* ctx);
 		JS_API static duk_ret_t AddOption(duk_context* ctx);
 		JS_API static duk_ret_t Delete(duk_context* ctx);

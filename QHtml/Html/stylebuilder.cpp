@@ -79,4 +79,40 @@ namespace ysp::qt::html {
 		if (style == "") return "";
 		return QString("%1 { %2 }").arg(format).arg(style);
 	}
+
+	StyleBuilder& StyleBuilder::SetBorder(qint32 width, const QString& style, const QString& color) {
+		return SetStyle("border", QString("%1px %2 %3").arg(width).arg(style).arg(color));
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderWidth(qint32 width) {
+		return SetStyle("border-width", QString("%1px").arg(width));
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderStyle(const QString& style) {
+		return SetStyle("border-style", style);
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderColor(const QString& color) {
+		return SetStyle("border-color", color);
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderColor(const QColor& color) {
+		return SetStyle("border-color", color.name());
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderTop(qint32 width, const QString& style, const QString& color) {
+		return SetStyle("border-top", QString("%1px %2 %3").arg(width).arg(style).arg(color));
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderRight(qint32 width, const QString& style, const QString& color) {
+		return SetStyle("border-right", QString("%1px %2 %3").arg(width).arg(style).arg(color));
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderBottom(qint32 width, const QString& style, const QString& color) {
+		return SetStyle("border-bottom", QString("%1px %2 %3").arg(width).arg(style).arg(color));
+	}
+
+	StyleBuilder& StyleBuilder::SetBorderLeft(qint32 width, const QString& style, const QString& color) {
+		return SetStyle("border-left", QString("%1px %2 %3").arg(width).arg(style).arg(color));
+	}
 }
