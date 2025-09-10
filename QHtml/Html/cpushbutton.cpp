@@ -3,7 +3,9 @@
 	2025.9.9
 */
 #include "cpushbutton.h"
+#include "include.h"
 namespace ysp::qt::html {
 	CPushButton::CPushButton(QWidget* parent) :QPushButton(parent) {
+		installEventFilter(new TriggerFilter(this, this));
 	}
 }

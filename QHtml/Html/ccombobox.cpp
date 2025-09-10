@@ -4,7 +4,7 @@
 */
 #include "ccombobox.h"
 namespace ysp::qt::html {
-	CComboBox::CComboBox(QWidget* parent):QComboBox(parent) {
+	CComboBox::CComboBox(QWidget* parent) :QComboBox(parent) {
 
 	}
 }
